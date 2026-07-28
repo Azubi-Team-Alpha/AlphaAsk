@@ -1,10 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session as DBSession
-from uuid import UUID
 from typing import List
+from uuid import UUID
 
-from app.db.database import get_db
-from app.db.models import User, Session as ChatSession, Message
+from app.db.dynamodb import dynamodb_service
 from app.core.deps import get_current_user
 from app.schemas.ask import QuestionOut, FAQOut
 
@@ -12,168 +10,100 @@ router = APIRouter(prefix="/question", tags=["questions"])
 
 
 @router.get("", response_model=List[QuestionOut])
-def list_questions(
-    db: DBSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+def list_questions(current_user: dict = Depends(get_current_user)):
     """List all questions asked by the current user."""
     # Get all user's sessions
-    sessions = (
-        db.query(ChatSession)
-        .filter(ChatSession.user_id == current_user.id)
-        .all()
-    )
+    sessions = dynamodb_service.list_user_sessions(user_id=current_user["user_id"])
     
     if not sessions:
         return []
     
-    session_ids = [s.id for s in sessions]
-    
-    # Get all user messages (questions)
-    questions = (
-        db.query(Message)
-        .filter(
-            Message.session_id.in_(session_ids),
-            Message.role == "user"
-        )
-        .order_by(Message.created_at.desc())
-        .all()
-    )
-    
-    # For each question, find the corresponding assistant answer
+    # Get all user messages (questions) from all sessions
     result = []
-    for q in questions:
-        # Find the next message (assistant response) for this session
-        answer = (
-            db.query(Message)
-            .filter(
-                Message.session_id == q.session_id,
-                Message.role == "assistant",
-                Message.created_at > q.created_at
-            )
-            .order_by(Message.created_at.asc())
-            .first()
-        )
-        
-        result.append(QuestionOut(
-            id=q.id,
-            question=q.content,
-            answer=answer.content if answer else "No answer yet",
-            session_id=q.session_id,
-            created_at=q.created_at
-        ))
+    for session in sessions:
+        messages = dynamodb_service.get_session_messages(session["session_id"])
+        for msg in messages:
+            if msg["role"] == "user":
+                # Find the next message (assistant response) for this session
+                messages_after = [m for m in messages if m["created_at"] > msg["created_at"] and m["role"] == "assistant"]
+                answer = messages_after[0]["content"] if messages_after else "No answer yet"
+                
+                result.append(QuestionOut(
+                    id=msg["message_id"],
+                    question=msg["content"],
+                    answer=answer,
+                    session_id=msg["session_id"],
+                    created_at=msg["created_at"]
+                ))
     
+    # Sort by created_at descending
+    result.sort(key=lambda x: x.created_at, reverse=True)
     return result
 
 
 @router.get("/{question_id}", response_model=QuestionOut)
 def get_question(
-    question_id: UUID,
-    db: DBSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    question_id: str,
+    current_user: dict = Depends(get_current_user),
 ):
     """Get a specific question by ID."""
     # Get the question message
-    question = (
-        db.query(Message)
-        .filter(Message.id == question_id, Message.role == "user")
-        .first()
-    )
+    # Note: DynamoDB doesn't have a direct way to get by message_id without knowing session_id
+    # For now, we'll scan (not efficient but works for development)
+    # In production, add a GSI on message_id
     
-    if not question:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Question not found"
-        )
+    # Get all user sessions
+    sessions = dynamodb_service.list_user_sessions(user_id=current_user["user_id"])
     
-    # Verify the question belongs to the current user
-    session = (
-        db.query(ChatSession)
-        .filter(ChatSession.id == question.session_id)
-        .first()
-    )
+    for session in sessions:
+        messages = dynamodb_service.get_session_messages(session["session_id"])
+        for msg in messages:
+            if msg["message_id"] == question_id and msg["role"] == "user":
+                # Find the corresponding answer
+                messages_after = [m for m in messages if m["created_at"] > msg["created_at"] and m["role"] == "assistant"]
+                answer = messages_after[0]["content"] if messages_after else "No answer yet"
+                
+                return QuestionOut(
+                    id=msg["message_id"],
+                    question=msg["content"],
+                    answer=answer,
+                    session_id=msg["session_id"],
+                    created_at=msg["created_at"]
+                )
     
-    if not session or session.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
-        )
-    
-    # Find the corresponding answer
-    answer = (
-        db.query(Message)
-        .filter(
-            Message.session_id == question.session_id,
-            Message.role == "assistant",
-            Message.created_at > question.created_at
-        )
-        .order_by(Message.created_at.asc())
-        .first()
-    )
-    
-    return QuestionOut(
-        id=question.id,
-        question=question.content,
-        answer=answer.content if answer else "No answer yet",
-        session_id=question.session_id,
-        created_at=question.created_at
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Question not found"
     )
 
 
 @router.delete("/{question_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_question(
-    question_id: UUID,
-    db: DBSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    question_id: str,
+    current_user: dict = Depends(get_current_user),
 ):
     """Delete a specific question and its associated answer."""
-    # Get the question message
-    question = (
-        db.query(Message)
-        .filter(Message.id == question_id, Message.role == "user")
-        .first()
+    # Get all user sessions
+    sessions = dynamodb_service.list_user_sessions(user_id=current_user["user_id"])
+    
+    for session in sessions:
+        messages = dynamodb_service.get_session_messages(session["session_id"])
+        for msg in messages:
+            if msg["message_id"] == question_id and msg["role"] == "user":
+                # Delete the question
+                dynamodb_service.delete_message(question_id)
+                
+                # Find and delete the associated answer
+                messages_after = [m for m in messages if m["created_at"] > msg["created_at"] and m["role"] == "assistant"]
+                if messages_after:
+                    dynamodb_service.delete_message(messages_after[0]["message_id"])
+                
+                return None
+    
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Question not found"
     )
-    
-    if not question:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Question not found"
-        )
-    
-    # Verify the question belongs to the current user
-    session = (
-        db.query(ChatSession)
-        .filter(ChatSession.id == question.session_id)
-        .first()
-    )
-    
-    if not session or session.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
-        )
-    
-    # Delete the question
-    db.delete(question)
-    
-    # Delete the associated answer if it exists
-    answer = (
-        db.query(Message)
-        .filter(
-            Message.session_id == question.session_id,
-            Message.role == "assistant",
-            Message.created_at > question.created_at
-        )
-        .order_by(Message.created_at.asc())
-        .first()
-    )
-    
-    if answer:
-        db.delete(answer)
-    
-    db.commit()
-    
-    return None
 
 
 # FAQ router
@@ -181,12 +111,14 @@ faq_router = APIRouter(prefix="/FAQ", tags=["faq"])
 
 
 @faq_router.get("", response_model=List[FAQOut])
-def get_faq(db: DBSession = Depends(get_db)):
+def get_faq():
     """Get frequently asked questions (static for now, can be made dynamic)."""
     # For now, return static FAQs. In production, this could be:
-    # 1. Stored in a separate FAQ table
+    # 1. Stored in DynamoDB FAQ table
     # 2. Generated from most common questions
     # 3. Manually curated by admin
+    
+    from datetime import datetime, timezone
     
     static_faqs = [
         {
@@ -227,7 +159,6 @@ def get_faq(db: DBSession = Depends(get_db)):
     ]
     
     # Convert to FAQOut format
-    from datetime import datetime, timezone
     faqs = []
     for faq in static_faqs:
         faqs.append(FAQOut(
