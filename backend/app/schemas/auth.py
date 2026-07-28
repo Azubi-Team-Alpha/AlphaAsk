@@ -7,17 +7,14 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class RegisterRequest(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
+class SignUpRequest(BaseModel):
     email: EmailStr
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=8, max_length=128)
 
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    name: str
-    email: str
 
 
 class UserOut(BaseModel):
