@@ -20,10 +20,12 @@ def get_current_user(
     )
     try:
         user_id = decode_access_token(token)
-    except JWTError:
+        import uuid as py_uuid
+        user_uuid = py_uuid.UUID(user_id)
+    except (JWTError, ValueError):
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_uuid).first()
     if user is None:
         raise credentials_exception
 
