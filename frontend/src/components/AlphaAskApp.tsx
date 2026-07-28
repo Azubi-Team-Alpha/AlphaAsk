@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ThemeMode } from "../types";
 import { useAuth } from "../hooks/useAuth";
 import { useConversations } from "../hooks/useConversations";

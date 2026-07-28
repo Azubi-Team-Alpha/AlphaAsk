@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Trash2, Search, X, ChevronDown, ChevronUp } from "lucide-react";
 import type { Question } from "../types";
 import { fetchQuestions, deleteQuestion } from "../lib/api-mock";
