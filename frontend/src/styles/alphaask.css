@@ -337,3 +337,111 @@
 .aa-modal-submit { width: 100%; justify-content: center; padding: 10px; font-size: 13.5px; margin-top: 4px; }
 .aa-modal-switch { text-align: center; font-size: 12.5px; color: var(--aa-text-muted); margin-top: 16px; }
 .aa-modal-switch button { background: none; border: none; color: var(--aa-text); font-weight: 600; cursor: pointer; padding: 0; text-decoration: underline; font-size: 12.5px; }
+
+/* ---------- question management & faq modal ---------- */
+.aa-modal-large {
+  max-width: 600px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.aa-questions-list,
+.aa-faq-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.aa-question-item,
+.aa-faq-item {
+  border: 1px solid var(--aa-border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: var(--aa-bg);
+}
+
+.aa-question-header,
+.aa-faq-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.aa-question-text,
+.aa-faq-question {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--aa-text);
+  line-height: 1.4;
+}
+
+.aa-question-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.aa-delete-btn:hover {
+  color: var(--aa-red);
+  background: var(--aa-red-bg);
+}
+
+.aa-question-meta {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--aa-text-muted);
+}
+
+.aa-question-answer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--aa-border);
+}
+
+.aa-answer-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--aa-text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.aa-answer-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--aa-text);
+  white-space: pre-wrap;
+}
+
+.aa-faq-category {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--aa-accent-deep);
+  font-weight: 500;
+}
+
+.aa-faq-answer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--aa-border);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--aa-text);
+}
+
+.aa-category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.aa-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

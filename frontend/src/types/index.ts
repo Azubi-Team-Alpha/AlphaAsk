@@ -43,3 +43,19 @@ export interface AuthPayload {
   email: string;
   password: string;
 }
+
+export interface Question {
+  id: string;
+  question: string;
+  answer: string;
+  session_id: string;
+  created_at: string;
+}
+
+export interface FAQ {
+  id: string;
+  question: string;
+  answer: string;
+  category: string;
+  created_at: string;
+}

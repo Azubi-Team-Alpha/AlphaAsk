@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { askAlphaAsk, createSession } from "../lib/api";
+import { askAlphaAsk, createSession } from "../lib/api-mock";
 import type { Conversation, Message, SubjectKey } from "../types";
 
 interface UseChatOptions {

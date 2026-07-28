@@ -26,3 +26,25 @@ class MessageOut(BaseModel):
 class HistoryResponse(BaseModel):
     session_id: UUID
     messages: list[MessageOut]
+
+
+class QuestionOut(BaseModel):
+    id: UUID
+    question: str
+    answer: str
+    session_id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class FAQOut(BaseModel):
+    id: UUID
+    question: str
+    answer: str
+    category: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

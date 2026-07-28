@@ -8,6 +8,8 @@ import { TopBar } from "./TopBar";
 import { Hero } from "./Hero";
 import { MessageThread } from "./MessageThread";
 import { AuthModal } from "./AuthModal";
+import { QuestionManagement } from "./QuestionManagement";
+import { FAQ } from "./FAQ";
 import "../styles/alphaask.css";
 
 export default function AlphaAskApp() {
@@ -16,6 +18,8 @@ export default function AlphaAskApp() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [showQuestionManagement, setShowQuestionManagement] = useState(false);
+  const [showFAQ, setShowFAQ] = useState(false);
 
   // `auth`'s onLogOut callback closes over `chat`, which is declared further
   // below — safe because the callback only runs on a later user action
@@ -57,6 +61,8 @@ export default function AlphaAskApp() {
         openConversation={chat.openConversation}
         handleLogOut={auth.handleLogOut}
         onSignUpClick={() => auth.setAuthModalMode("signup")}
+        onQuestionManagementClick={() => setShowQuestionManagement(true)}
+        onFAQClick={() => setShowFAQ(true)}
       />
 
       <div className="aa-main">
@@ -109,6 +115,14 @@ export default function AlphaAskApp() {
           onSwitchMode={auth.setAuthModalMode}
           onSubmit={auth.handleAuthSubmit}
         />
+      )}
+
+      {showQuestionManagement && (
+        <QuestionManagement onClose={() => setShowQuestionManagement(false)} />
+      )}
+
+      {showFAQ && (
+        <FAQ onClose={() => setShowFAQ(false)} />
       )}
     </div>
   );
