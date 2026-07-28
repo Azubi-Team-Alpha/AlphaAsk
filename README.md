@@ -50,10 +50,11 @@ uvicorn app.main:app --reload
 | `DATABASE_URL` | PostgreSQL connection string |
 | `REDIS_URL` | Redis connection string |
 | `JWT_SECRET_KEY` | Secret for signing JWTs |
+| `JWT_ALGORITHM` | JWT signing algorithm (default: HS256) |
 | `JWT_EXPIRE_MINUTES` | Token expiry (default: 60) |
-| `AWS_REGION` | AWS region for Bedrock |
-| `BEDROCK_MODEL_ID` | Bedrock model ID |
-| `RATE_LIMIT_PER_MINUTE` | Max requests per user per minute |
+| `AWS_REGION` | AWS region for Bedrock (default: eu-west-1) |
+| `BEDROCK_MODEL_ID` | Bedrock model ID (default: Claude 3.5 Sonnet) |
+| `RATE_LIMIT_PER_MINUTE` | Max requests per user per minute (default: 10) |
 
 ### Docker
 
@@ -67,13 +68,13 @@ Interactive docs available at `http://localhost:8000/docs`.
 
 ## Project Phases
 
-| Phase | Focus |
-|-------|-------|
-| 1 | Project setup, GitHub repo, AWS provisioning |
-| 2 | Core REST API endpoints |
-| 3 | AI integration (AWS Bedrock) |
-| 4 | CI/CD pipeline (GitHub Actions) |
-| 5 | Logging, monitoring (CloudWatch), deployment |
+| Phase | Focus | Status |
+|-------|-------|--------|
+| 1 | Project setup, GitHub repo, AWS provisioning | ✅ Done |
+| 2 | Core REST API endpoints | ✅ Done |
+| 3 | AI integration (AWS Bedrock) | 🔲 Pending |
+| 4 | CI/CD pipeline (GitHub Actions) | 🔲 Pending |
+| 5 | Logging, monitoring (CloudWatch), deployment | 🔲 Pending |
 
 ## Tech Stack
 
