@@ -17,8 +17,10 @@ CI/CD is handled via GitHub Actions.
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | `GET` | `/health` | No | Health check |
-| `POST` | `/auth/login` | No | Login, returns JWT |
+| `POST` | `/auth/register` | No | Register, returns JWT + user info |
+| `POST` | `/auth/login` | No | Login, returns JWT + user info |
 | `POST` | `/sessions` | Yes | Create a chat session |
+| `GET` | `/sessions` | Yes | List user's sessions |
 | `POST` | `/ask` | Yes | Ask an academic question |
 | `GET` | `/history/{session_id}` | Yes | Get conversation history |
 
