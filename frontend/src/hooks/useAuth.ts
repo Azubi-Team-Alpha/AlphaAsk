@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { authenticate } from "../lib/api";
+import { authenticate, setToken } from "../lib/api";
 import type { AuthMode, AuthPayload, CurrentUser } from "../types";
 
 interface UseAuthOptions {
@@ -19,6 +19,7 @@ export function useAuth({ onLogOut }: UseAuthOptions = {}) {
   }, []);
 
   const handleLogOut = useCallback(() => {
+    setToken(null);
     setIsAuthenticated(false);
     setCurrentUser(null);
     onLogOut?.();

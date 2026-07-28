@@ -7,7 +7,7 @@ from app.db.models import User, Session as ChatSession
 from app.core.deps import get_current_user
 from app.schemas.ask import AskRequest, AskResponse
 from app.services.conversation_service import get_conversation_history, save_message
-from app.services.llm_service import get_llm_response, LLMError
+from app.services.llm_services import get_llm_response, LLMError
 from app.core.rate_limit import enforce_rate_limit
 
 router = APIRouter(tags=["ask"])

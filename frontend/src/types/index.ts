@@ -1,13 +1,7 @@
 export type Role = "user" | "assistant";
 export type AnnotationTone = "positive" | "tip" | "watch";
 export type ThemeMode = "dark" | "light";
-export type SubjectKey =
-  | "math"
-  | "science"
-  | "writing"
-  | "code"
-  | "history"
-  | "study";
+export type SubjectKey = "math" | "science" | "writing" | "code" | "history" | "study";
 export type AuthMode = "login" | "signup";
 
 export interface Annotation {
@@ -31,15 +25,16 @@ export interface Conversation {
   messages: Message[];
 }
 
+// Matches backend AskResponse: { answer, session_id, timestamp }
 export interface AskResponse {
-  content: string;
-  annotations?: Annotation[];
+  answer: string;
 }
 
 export interface CurrentUser {
   name: string;
   initials: string;
   email: string;
+  token: string;
 }
 
 export interface AuthPayload {
