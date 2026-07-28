@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { authenticate, setToken } from "../lib/api";
+import { authenticate, setToken } from "../lib/api-mock";
 import type { AuthMode, AuthPayload, CurrentUser } from "../types";
 
 interface UseAuthOptions {

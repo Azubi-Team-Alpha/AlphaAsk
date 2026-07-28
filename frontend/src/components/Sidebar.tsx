@@ -9,6 +9,8 @@ import {
   FolderKanban,
   MoreHorizontal,
   Sparkles,
+  HelpCircle,
+  List,
 } from "lucide-react";
 import type { Conversation, CurrentUser } from "../types";
 import { timeAgo } from "../lib/utils";
@@ -28,6 +30,8 @@ interface SidebarProps {
   openConversation: (id: string) => void;
   handleLogOut: () => void;
   onSignUpClick: () => void;
+  onQuestionManagementClick: () => void;
+  onFAQClick: () => void;
 }
 
 export function Sidebar({
@@ -45,6 +49,8 @@ export function Sidebar({
   openConversation,
   handleLogOut,
   onSignUpClick,
+  onQuestionManagementClick,
+  onFAQClick,
 }: SidebarProps) {
   return (
     <aside className={`aa-sidebar ${sidebarOpen ? "" : "aa-closed"}`}>
@@ -91,6 +97,12 @@ export function Sidebar({
         </button>
         <button className="aa-nav-item">
           <FolderKanban size={16} /> Classes
+        </button>
+        <button className="aa-nav-item" onClick={onQuestionManagementClick}>
+          <List size={16} /> My Questions
+        </button>
+        <button className="aa-nav-item" onClick={onFAQClick}>
+          <HelpCircle size={16} /> FAQ
         </button>
         <button className="aa-nav-item">
           <MoreHorizontal size={16} /> More
