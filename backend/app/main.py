@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api import ask, history, sessions, auth, health
+from app.api import ask, history, sessions, auth, health, questions
 
 app = FastAPI(
     title="AI Student Support API",
@@ -12,3 +12,5 @@ app.include_router(auth.router)
 app.include_router(sessions.router)
 app.include_router(ask.router)
 app.include_router(history.router)
+app.include_router(questions.router)
+app.include_router(questions.faq_router)

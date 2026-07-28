@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchConversations } from "../lib/api";
+import { fetchConversations } from "../lib/api-mock";
 import type { Conversation } from "../types";
 
 export function useConversations(isAuthenticated: boolean) {
