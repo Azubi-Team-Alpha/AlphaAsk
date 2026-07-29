@@ -59,6 +59,15 @@ resource "aws_iam_policy" "lambda_services_access" {
           "bedrock:ListInferenceProfiles"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "aws-marketplace:ViewSubscriptions",
+          "aws-marketplace:Subscribe",
+          "aws-marketplace:Unsubscribe"
+        ]
+        Resource = "*"
       }
     ]
   })
