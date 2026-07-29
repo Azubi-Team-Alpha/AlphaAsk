@@ -60,7 +60,8 @@ def call_groq_api(conversation_history: list[dict], new_question: str) -> str:
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {settings.groq_api_key}"
+            "Authorization": f"Bearer {settings.groq_api_key}",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AlphaAskBackend/1.0",
         },
         method="POST"
     )
@@ -80,7 +81,12 @@ def call_gemini_api(conversation_history: list[dict], new_question: str) -> str:
     if not settings.gemini_api_key:
         raise LLMError("GEMINI_API_KEY is not configured.")
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.gemini_api_key}"
+    gemini_models = [
+        "gemini-2.0-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-pro-latest",
+        "gemini-1.5-flash",
+    ]
 
     contents = []
     for msg in conversation_history:
@@ -103,22 +109,33 @@ def call_gemini_api(conversation_history: list[dict], new_question: str) -> str:
         }
     }
 
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST"
-    )
+    last_err = None
+    for model in gemini_models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={settings.gemini_api_key}"
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AlphaAskBackend/1.0",
+            },
+            method="POST"
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data["candidates"][0]["content"]["parts"][0]["text"]
+        except urllib.error.HTTPError as err:
+            err_body = err.read().decode("utf-8", errors="ignore")
+            last_err = f"Gemini ({model}) Error ({err.code}): {err_body[:200]}"
+            if err.code == 404:
+                continue
+            break
+        except Exception as e:
+            last_err = f"Gemini ({model}) network error: {str(e)}"
+            break
 
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            return data["candidates"][0]["content"]["parts"][0]["text"]
-    except urllib.error.HTTPError as err:
-        err_body = err.read().decode("utf-8", errors="ignore")
-        raise LLMError(f"Gemini API Error ({err.code}): {err_body[:200]}")
-    except Exception as e:
-        raise LLMError(f"Gemini API network error: {str(e)}")
+    raise LLMError(last_err or "Gemini API failed")
 
 
 def call_bedrock_api(conversation_history: list[dict], new_question: str) -> str:
