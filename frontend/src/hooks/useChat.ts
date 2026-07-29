@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { askAlphaAsk, createSession } from "../lib/api-mock";
+import { generateUUID } from "../lib/utils";
 import type { Conversation, Message, SubjectKey } from "../types";
 
 interface UseChatOptions {
@@ -42,7 +43,7 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
     if (!question || isThinking) return;
 
     const userMessage: Message = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       role: "user",
       content: question,
       subject,
@@ -63,7 +64,7 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
       const response = await askAlphaAsk(question, sid);
 
       const assistantMessage: Message = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         role: "assistant",
         content: response.answer,
         timestamp: Date.now(),
@@ -93,7 +94,7 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
       setMessages((prev) => [
         ...prev,
         {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           role: "assistant",
           content: `AlphaAsk couldn't reach the model just now (${detail}). Try sending that again.`,
           timestamp: Date.now(),

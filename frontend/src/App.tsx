@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { generateUUID } from "./lib/utils";
 import {
   Send,
   Plus,
@@ -403,7 +404,7 @@ export default function AlphaAskApp() {
       if (!question || isThinking) return;
 
       const userMessage: Message = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         role: "user",
         content: question,
         subject,
@@ -417,7 +418,7 @@ export default function AlphaAskApp() {
       try {
         const response = await mockAskAlphaAsk(question, subject, nextMessages);
         const assistantMessage: Message = {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           role: "assistant",
           content: response.content,
           annotations: response.annotations,
@@ -437,7 +438,7 @@ export default function AlphaAskApp() {
               );
             }
             const newConvo: Conversation = {
-              id: crypto.randomUUID(),
+              id: generateUUID(),
               title,
               updatedAt: Date.now(),
               messages: [],
@@ -450,7 +451,7 @@ export default function AlphaAskApp() {
         setMessages((prev) => [
           ...prev,
           {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             role: "assistant",
             content:
               "AlphaAsk couldn't reach the model just now. Try sending that again.",

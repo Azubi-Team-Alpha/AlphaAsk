@@ -1,6 +1,8 @@
 import type { AuthPayload, CurrentUser, Conversation, FAQ, Question } from "../types";
+import { generateUUID } from "./utils";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+const rawBase = import.meta.env.VITE_API_BASE_URL || "";
+const API_BASE = rawBase.replace(/\/+$/, "");
 
 let authToken: string | null = localStorage.getItem("alphaask_token");
 
@@ -33,10 +35,10 @@ export async function createSession(): Promise<string> {
     headers: getHeaders(),
   });
   if (!res.ok) {
-    return crypto.randomUUID();
+    return generateUUID();
   }
   const data = await res.json();
-  return data.session_id || crypto.randomUUID();
+  return data.session_id || generateUUID();
 }
 
 export async function authenticate(payload: AuthPayload): Promise<CurrentUser> {
@@ -75,7 +77,7 @@ export async function askAlphaAsk(
   question: string,
   session_id?: string
 ) {
-  const sid = session_id || crypto.randomUUID();
+  const sid = session_id || generateUUID();
   const res = await fetch(`${API_BASE}/api/ask`, {
     method: "POST",
     headers: getHeaders(),
