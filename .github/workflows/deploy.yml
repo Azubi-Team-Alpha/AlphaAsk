@@ -74,11 +74,21 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Terraform Init & Ensure ECR Repository
+      - name: Terraform Init & Provision Prerequisite Base Infrastructure
         run: |
           cd infra/terraform
           terraform init
-          terraform apply -auto-approve -target=aws_ecr_repository.backend
+          terraform apply -auto-approve \
+            -target=aws_ecr_repository.backend \
+            -target=aws_iam_role.lambda_exec \
+            -target=aws_dynamodb_table.users \
+            -target=aws_dynamodb_table.sessions \
+            -target=aws_dynamodb_table.messages \
+            -target=aws_dynamodb_table.questions \
+            -target=aws_dynamodb_table.faq \
+            -target=aws_security_group.elasticache_sg \
+            -target=aws_elasticache_cluster.redis \
+            -target=aws_s3_bucket.frontend
 
       - name: Build & Push Backend Docker Image to ECR
         env:
