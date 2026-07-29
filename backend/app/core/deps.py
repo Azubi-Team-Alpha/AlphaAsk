@@ -15,7 +15,9 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     )
     try:
         user_id = decode_access_token(token)
-    except JWTError:
+        import uuid as py_uuid
+        user_uuid = py_uuid.UUID(user_id)
+    except (JWTError, ValueError):
         raise credentials_exception
 
     user = dynamodb_service.get_user_by_id(user_id)

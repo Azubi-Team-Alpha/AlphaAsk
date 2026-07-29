@@ -7,12 +7,10 @@ from typing import Optional, List
 from datetime import datetime
 
 
-class UserModel(BaseModel):
-    user_id: str
-    email: EmailStr
-    name: str
-    hashed_password: str
-    created_at: str
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String, unique=True, nullable=False, index=True)
+    hashed_password = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
 class SessionModel(BaseModel):
