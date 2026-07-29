@@ -72,7 +72,7 @@ class DynamoDBService:
             items = response.get("Items", [])
             if items:
                 return items[0]
-        except ClientError:
+        except Exception:
             pass
 
         # Fallback scan
@@ -83,7 +83,7 @@ class DynamoDBService:
             )
             items = response.get("Items", [])
             return items[0] if items else None
-        except ClientError as e:
+        except Exception as e:
             logger.warning(f"DynamoDB get_user_by_email failed: {e}")
             return None
     
@@ -92,7 +92,7 @@ class DynamoDBService:
         try:
             response = self.users_table.get_item(Key={"user_id": user_id})
             return response.get("Item")
-        except ClientError as e:
+        except Exception as e:
             logger.warning(f"DynamoDB get_user_by_id failed: {e}")
             return None
     
