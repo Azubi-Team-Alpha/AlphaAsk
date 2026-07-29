@@ -1,32 +1,43 @@
-import redis
+import time
 import logging
+import redis as redis_lib
 from fastapi import HTTPException, status
 from app.core.config import settings
 
-logger = logging.getLogger("app.core.rate_limit")
+logger = logging.getLogger("rate_limit")
 
 try:
-    redis_client = redis.from_url(settings.redis_url, decode_responses=True)
+    _redis = redis_lib.from_url(settings.redis_url, decode_responses=True, socket_timeout=1.0)
 except Exception as e:
-    logger.error(f"Could not connect to Redis: {e}")
-    redis_client = None
+    _redis = None
+    logger.warning(f"Redis initialization failed: {e}")
 
-def enforce_rate_limit(user_id: str):
-    if redis_client is None:
-        # Fail-open if Redis client failed initialization
+
+def enforce_rate_limit(user_id: str) -> None:
+    if not _redis:
         return
 
-    key = f"rate_limit:{user_id}"
+    key = f"rate:{user_id}"
+    now = time.time()
+    window_start = now - 60
+
     try:
-        current_count = redis_client.incr(key)
-        if current_count == 1:
-            redis_client.expire(key, 60)
-        
-        if current_count > settings.rate_limit_per_minute:
+        pipe = _redis.pipeline()
+        pipe.zremrangebyscore(key, "-inf", window_start)
+        pipe.zadd(key, {str(now): now})
+        pipe.zcard(key)
+        pipe.expire(key, 60)
+        results = pipe.execute()
+
+        count = results[2]
+        if count > settings.rate_limit_per_minute:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Rate limit exceeded. Maximum {settings.rate_limit_per_minute} requests per minute."
+                detail="Rate limit exceeded. Please wait before sending another request.",
             )
-    except redis.RedisError as e:
-        # Fail-open if Redis error occurs during execution
-        logger.error(f"Redis rate limiter error: {e}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Redis rate limit check skipped due to connection error: {e}")
+        return
+

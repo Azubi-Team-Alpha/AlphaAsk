@@ -1,9 +1,10 @@
-import uuid
-from datetime import datetime, timezone
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from app.db.database import Base
+"""
+Serverless Data Models for DynamoDB Entities
+"""
+
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, List
+from datetime import datetime
 
 
 class User(Base):
@@ -17,24 +18,31 @@ class User(Base):
     sessions = relationship("Session", back_populates="user")
 
 
-class Session(Base):
-    __tablename__ = "sessions"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-
-    user = relationship("User", back_populates="sessions")
-    messages = relationship("Message", back_populates="session", order_by="Message.created_at")
+class SessionModel(BaseModel):
+    session_id: str
+    user_id: str
+    created_at: str
 
 
-class Message(Base):
-    __tablename__ = "messages"
+class MessageModel(BaseModel):
+    message_id: str
+    session_id: str
+    role: str  # "user" or "assistant"
+    content: str
+    created_at: str
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False, index=True)
-    role = Column(String, nullable=False)       # "user" or "assistant"
-    content = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
-    session = relationship("Session", back_populates="messages")
+class QuestionModel(BaseModel):
+    id: str
+    question: str
+    answer: str
+    session_id: str
+    created_at: str
+
+
+class FAQModel(BaseModel):
+    id: str
+    question: str
+    answer: str
+    category: str
+    created_at: Optional[str] = None

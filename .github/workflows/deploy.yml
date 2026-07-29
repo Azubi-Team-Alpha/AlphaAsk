@@ -1,0 +1,136 @@
+name: AlphaAsk Serverless CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  # Job 1: Test & Validate Code (Backend, Frontend, Terraform)
+  test-and-validate:
+    name: 1. Test & Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Backend Dependencies & Run Pytest
+        env:
+          AWS_ACCESS_KEY_ID: testing
+          AWS_SECRET_ACCESS_KEY: testing
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pytest
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Frontend Dependencies & Check Build
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Validate Terraform Configuration
+        run: |
+          cd infra/terraform
+          terraform init -backend=false
+          terraform fmt -check
+          terraform validate
+
+  # Job 2: Build Container, Provision Infrastructure & Deploy Services
+  deploy-to-aws:
+    name: 2. Build & Deploy to AWS Serverless
+    needs: test-and-validate
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init & Provision Prerequisite Base Infrastructure
+        run: |
+          cd infra/terraform
+          terraform init
+          terraform apply -auto-approve \
+            -target=aws_ecr_repository.backend \
+            -target=aws_iam_role.lambda_exec \
+            -target=aws_dynamodb_table.users \
+            -target=aws_dynamodb_table.sessions \
+            -target=aws_dynamodb_table.messages \
+            -target=aws_dynamodb_table.questions \
+            -target=aws_dynamodb_table.faq \
+            -target=aws_security_group.elasticache_sg \
+            -target=aws_elasticache_cluster.redis \
+            -target=aws_s3_bucket.frontend
+
+      - name: Build & Push Backend Docker Image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: alphaask-backend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd backend
+          docker build --provenance=false --platform linux/amd64 \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Terraform Apply Full Infrastructure
+        run: |
+          cd infra/terraform
+          terraform apply -auto-approve
+
+      - name: Update AWS Lambda Code
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: alphaask-backend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          aws lambda update-function-code \
+            --function-name alphaask-backend \
+            --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Set up Node.js 20 & Build Frontend
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Deploy Frontend Build to S3
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+          aws s3 sync dist/ s3://alphaask-frontend-static-dev --delete
+

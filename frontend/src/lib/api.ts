@@ -1,28 +1,110 @@
-import type { AuthPayload, CurrentUser, Message, Conversation } from "../types";
+import type { AuthPayload, CurrentUser, Conversation, FAQ, Question } from "../types";
+
+let authToken: string | null = localStorage.getItem("alphaask_token");
+
+export function setToken(token: string | null) {
+  authToken = token;
+  if (token) {
+    localStorage.setItem("alphaask_token", token);
+  } else {
+    localStorage.removeItem("alphaask_token");
+  }
+}
+
+function getHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
+  return headers;
+}
 
 export async function fetchConversations(): Promise<Conversation[]> {
-  const res = await fetch("/api/conversations");
+  const res = await fetch("/api/conversations", { headers: getHeaders() });
+  if (!res.ok) return [];
   return res.json();
 }
 
+export async function createSession(): Promise<string> {
+  const res = await fetch("/api/sessions", {
+    method: "POST",
+    headers: getHeaders(),
+  });
+  if (!res.ok) {
+    return crypto.randomUUID();
+  }
+  const data = await res.json();
+  return data.session_id || crypto.randomUUID();
+}
+
 export async function authenticate(payload: AuthPayload): Promise<CurrentUser> {
-  const res = await fetch(`/api/auth/${payload.mode}`, {
+  const endpoint = payload.mode === "login" ? "/api/auth/login" : "/api/auth/register";
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      email: payload.email,
+      password: payload.password,
+      name: payload.name || "Student",
+    }),
   });
-  return res.json();
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ detail: "Authentication failed" }));
+    throw new Error(errorData.detail || "Authentication failed");
+  }
+  const data = await res.json();
+  const token = data.access_token || "";
+  if (token) {
+    setToken(token);
+  }
+  const name = data.name || payload.name || "Student";
+  const email = data.email || payload.email;
+  const initials = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "ST";
+
+  return {
+    email,
+    name,
+    initials,
+    token,
+  };
 }
 
 export async function askAlphaAsk(
   question: string,
-  subject: string | undefined,
-  history: Message[]
+  session_id?: string
 ) {
+  const sid = session_id || crypto.randomUUID();
   const res = await fetch("/api/ask", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, subject, history }),
+    headers: getHeaders(),
+    body: JSON.stringify({ question, session_id: sid }),
   });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ detail: "Request failed" }));
+    throw new Error(errorData.detail || `Server returned ${res.status}`);
+  }
   return res.json();
 }
+
+export async function fetchFAQ(): Promise<FAQ[]> {
+  const res = await fetch("/api/FAQ", { headers: getHeaders() });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchQuestions(): Promise<Question[]> {
+  const res = await fetch("/api/questions", { headers: getHeaders() });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function deleteQuestion(id: string): Promise<void> {
+  const res = await fetch(`/api/questions/${id}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error("Failed to delete question");
+  }
+}
+

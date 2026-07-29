@@ -1,4 +1,3 @@
-import React from "react";
 import { LogIn, Moon, PanelLeft, Sun, UserPlus } from "lucide-react";
 import type { ThemeMode } from "../types";
 

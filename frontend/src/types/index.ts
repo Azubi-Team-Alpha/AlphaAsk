@@ -1,7 +1,7 @@
 export type Role = "user" | "assistant";
 export type AnnotationTone = "positive" | "tip" | "watch";
 export type ThemeMode = "dark" | "light";
-export type SubjectKey = "math" | "science" | "writing" | "code" | "history" | "study";
+export type SubjectKey = "math" | "science" | "writing" | "code" | "history" | "study" | string;
 export type AuthMode = "login" | "signup";
 
 export interface Annotation {

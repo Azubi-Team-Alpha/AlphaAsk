@@ -1,16 +1,11 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-from app.core.config import settings
+"""
+Serverless Database Module for AlphaAsk
+Uses Amazon DynamoDB for cloud storage.
+"""
 
-engine = create_engine(settings.database_url, pool_pre_ping=True)
+from app.db.dynamodb import dynamodb_service, get_dynamodb
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base = declarative_base()
 
 def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    """Dependency provider for DynamoDB service instance."""
+    yield dynamodb_service

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { HelpCircle, Search, X, ChevronDown, ChevronUp, BookOpen } from "lucide-react";
 import type { FAQ } from "../types";
 import { fetchFAQ } from "../lib/api-mock";

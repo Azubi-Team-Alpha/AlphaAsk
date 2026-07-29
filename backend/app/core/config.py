@@ -1,6 +1,8 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
     # DynamoDB
     dynamodb_endpoint: str = ""
     aws_region: str = "us-east-1"
@@ -11,7 +13,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379"
 
     # JWT
-    jwt_secret_key: str
+    jwt_secret_key: str = "alphaask-secret-jwt-key-2026"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
 
@@ -22,12 +24,13 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 10
 
     # DynamoDB Table Names
-    users_table: str = "Users"
-    sessions_table: str = "Sessions"
-    messages_table: str = "Messages"
-    faq_table: str = "FAQ"
+    users_table: str = "alphaask-Users"
+    sessions_table: str = "alphaask-Sessions"
+    messages_table: str = "alphaask-Messages"
+    questions_table: str = "alphaask-Questions"
+    faq_table: str = "alphaask-FAQ"
 
-    class Config:
-        env_file = ".env"
+    # Legacy / Optional fallback
+    database_url: str = ""
 
 settings = Settings()
