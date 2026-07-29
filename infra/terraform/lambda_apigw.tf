@@ -17,6 +17,7 @@ resource "aws_lambda_function" "backend" {
       FAQ_TABLE        = aws_dynamodb_table.faq.name
       JWT_SECRET_KEY   = var.jwt_secret_key
       BEDROCK_MODEL_ID = var.bedrock_model_id
+      REDIS_URL        = "redis://${aws_elasticache_cluster.redis.cache_nodes.0.address}:6379"
     }
   }
 

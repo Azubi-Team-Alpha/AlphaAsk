@@ -31,7 +31,7 @@
 - **AI Service**: AWS Bedrock — Anthropic Claude 3.5 Sonnet (`anthropic.claude-3-5-sonnet-20240620-v1:0`).
 - **Database**: Amazon DynamoDB (On-Demand NoSQL Tables for Users, Sessions, Messages, Questions, FAQ).
 - **Authentication**: JWT (JSON Web Tokens via `python-jose`) and `bcrypt` password hashing.
-- **Cache / Rate Limiting**: Redis with graceful serverless fallback.
+- **Cache / Rate Limiting**: Amazon ElastiCache for Redis (AWS Managed Redis Cluster) with graceful serverless fallback.
 - **Infrastructure as Code**: Terraform (`>= 1.5.0`, AWS Provider `~> 5.0`).
 - **CI/CD Pipeline**: GitHub Actions (automated linting, testing, ECR container build, and Terraform deployment).
 

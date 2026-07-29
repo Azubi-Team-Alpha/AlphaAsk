@@ -22,3 +22,8 @@ output "dynamodb_users_table" {
   description = "Name of the DynamoDB Users table"
   value       = aws_dynamodb_table.users.name
 }
+
+output "elasticache_redis_endpoint" {
+  description = "Primary endpoint address for AWS ElastiCache Redis cluster"
+  value       = aws_elasticache_cluster.redis.cache_nodes.0.address
+}

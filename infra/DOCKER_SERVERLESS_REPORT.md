@@ -69,6 +69,7 @@ infra/terraform/
 ├── outputs.tf           # Resource URLs and API Gateway endpoints
 ├── ecr.tf               # ECR Repository for backend container images
 ├── dynamodb.tf          # DynamoDB Tables (Users, Sessions, Messages, FAQ)
+├── elasticache.tf       # AWS ElastiCache for Redis (Managed Caching & Rate Limiting)
 ├── iam.tf               # IAM execution roles for Lambda (DynamoDB & Bedrock access)
 ├── lambda_apigw.tf      # AWS Lambda Container function & API Gateway HTTP API
 └── s3_cloudfront.tf     # S3 bucket & CloudFront distribution for React frontend
