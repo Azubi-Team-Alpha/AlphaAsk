@@ -54,7 +54,9 @@ resource "aws_iam_policy" "lambda_services_access" {
         Effect = "Allow"
         Action = [
           "bedrock:InvokeModel",
-          "bedrock:Converse"
+          "bedrock:InvokeModelWithResponseStream",
+          "bedrock:GetInferenceProfile",
+          "bedrock:ListInferenceProfiles"
         ]
         Resource = "*"
       }

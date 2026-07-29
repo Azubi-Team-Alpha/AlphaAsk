@@ -56,10 +56,10 @@ def get_llm_response(conversation_history: list[dict], new_question: str) -> str
         messages.append({"role": "user", "content": [{"text": question}]})
 
     model_candidates = [
-        "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
-        "us.anthropic.claude-3-haiku-20240307-v1:0",
         "amazon.titan-text-express-v1",
-        "amazon.nova-micro-v1:0",
+        "us.amazon.nova-micro-v1:0",
+        "us.anthropic.claude-3-haiku-20240307-v1:0",
+        "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
         settings.bedrock_model_id,
     ]
     # Remove duplicates preserving order
