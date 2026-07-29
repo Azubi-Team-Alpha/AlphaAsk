@@ -4,25 +4,28 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 from uuid import uuid4
 
+from app.core.config import settings
+
 # DynamoDB client setup
 def get_dynamodb():
     """Get DynamoDB resource (uses local DynamoDB if DYNAMODB_ENDPOINT is set)"""
-    endpoint_url = os.getenv("DYNAMODB_ENDPOINT")
+    endpoint_url = os.getenv("DYNAMODB_ENDPOINT", settings.dynamodb_endpoint)
     if endpoint_url:
         return boto3.resource(
             "dynamodb",
             endpoint_url=endpoint_url,
-            region_name=os.getenv("AWS_REGION", "us-east-1"),
+            region_name=os.getenv("AWS_REGION", settings.aws_region),
             aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID", "test"),
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY", "test")
         )
-    return boto3.resource("dynamodb", region_name=os.getenv("AWS_REGION", "us-east-1"))
+    return boto3.resource("dynamodb", region_name=os.getenv("AWS_REGION", settings.aws_region))
 
 # Table names
-USERS_TABLE = os.getenv("USERS_TABLE", "Users")
-SESSIONS_TABLE = os.getenv("SESSIONS_TABLE", "Sessions")
-MESSAGES_TABLE = os.getenv("MESSAGES_TABLE", "Messages")
-FAQ_TABLE = os.getenv("FAQ_TABLE", "FAQ")
+USERS_TABLE = os.getenv("USERS_TABLE", settings.users_table)
+SESSIONS_TABLE = os.getenv("SESSIONS_TABLE", settings.sessions_table)
+MESSAGES_TABLE = os.getenv("MESSAGES_TABLE", settings.messages_table)
+QUESTIONS_TABLE = os.getenv("QUESTIONS_TABLE", settings.questions_table)
+FAQ_TABLE = os.getenv("FAQ_TABLE", settings.faq_table)
 
 
 class DynamoDBService:
@@ -33,6 +36,7 @@ class DynamoDBService:
         self.users_table = self.dynamodb.Table(USERS_TABLE)
         self.sessions_table = self.dynamodb.Table(SESSIONS_TABLE)
         self.messages_table = self.dynamodb.Table(MESSAGES_TABLE)
+        self.questions_table = self.dynamodb.Table(QUESTIONS_TABLE)
         self.faq_table = self.dynamodb.Table(FAQ_TABLE)
     
     # User operations

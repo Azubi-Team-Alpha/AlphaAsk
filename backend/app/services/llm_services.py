@@ -3,17 +3,17 @@ from botocore.exceptions import ClientError, ReadTimeoutError
 from botocore.config import Config
 from app.core.config import settings
 
-bedrock_config = Config(
-    read_timeout=20,
-    connect_timeout=5,
-    retries={"max_attempts": 2, "mode": "standard"},
-)
-
-bedrock_client = boto3.client(
-    "bedrock-runtime",
-    region_name=settings.aws_region,
-    config=bedrock_config,
-)
+def get_bedrock_client():
+    bedrock_config = Config(
+        read_timeout=20,
+        connect_timeout=5,
+        retries={"max_attempts": 2, "mode": "standard"},
+    )
+    return boto3.client(
+        "bedrock-runtime",
+        region_name=settings.aws_region,
+        config=bedrock_config,
+    )
 
 SYSTEM_PROMPT = (
     "You are an academic support assistant for university students. "
@@ -40,7 +40,8 @@ def get_llm_response(conversation_history: list[dict], new_question: str) -> str
     messages.append({"role": "user", "content": [{"text": new_question}]})
 
     try:
-        response = bedrock_client.converse(
+        client = get_bedrock_client()
+        response = client.converse(
             modelId=settings.bedrock_model_id,
             system=[{"text": SYSTEM_PROMPT}],
             messages=messages,
