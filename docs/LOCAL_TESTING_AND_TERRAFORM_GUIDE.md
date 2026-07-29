@@ -1,189 +1,187 @@
-# AlphaAsk: Local Testing & Terraform Infrastructure Guide
+# AlphaAsk: Full Local Setup, Testing & Terraform Deployment Guide
 
-This guide provides step-by-step instructions for testing the **AlphaAsk** backend and frontend locally, provisioning AWS Serverless Infrastructure using **Terraform**, and validating the **GitHub Actions CI/CD** pipeline.
+This document provides complete, step-by-step instructions to provision the AWS Serverless Infrastructure using **Terraform**, run and test the **FastAPI Backend** and **React Frontend** locally, and resolve model connection or API gateway integration issues.
 
 ---
 
 ## 1. Architecture Overview
 
 ```
-[ React Frontend (Vite) ]
-         │
-         ▼ (HTTP / CORS)
-[ Amazon API Gateway / FastAPI Server ]
-         │
-         ├──> [ Amazon DynamoDB ] (Users, Sessions, Messages, Questions, FAQ)
-         └──> [ AWS Bedrock ] (Claude 3.5 Sonnet AI Model)
+[ React Frontend (Vite) ]  ───►  [ Amazon API Gateway (HTTP API) ]
+                                            │
+                                            ▼
+                               [ AWS Lambda Container (FastAPI) ]
+                                 │            │           │
+                                 ▼            ▼           ▼
+                           [ DynamoDB ]   [ Redis ]  [ AWS Bedrock ]
+                           (5 Tables)     (Cache)    (Claude 3.5 Sonnet)
 ```
 
 ---
 
-## 2. Local Testing Guide
+## 2. Prerequisites & Environment Setup
 
-### Prerequisites
-- Python 3.11+
-- Node.js 20+
-- Docker (optional, for local container testing)
-- AWS CLI configured (`aws configure`) with access to AWS Bedrock and DynamoDB
-
----
-
-### Step 2.1: Run the Backend Locally
-
-1. Navigate to the `backend` directory:
-   ```bash
-   cd backend
-   ```
-
-2. Create and activate a virtual environment:
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
-
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Configure environment variables in `backend/.env`:
-   ```env
-   AWS_REGION=us-east-1
-   JWT_SECRET_KEY=your-super-secret-jwt-key
-   BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
-   USERS_TABLE=alphaask-Users
-   SESSIONS_TABLE=alphaask-Sessions
-   MESSAGES_TABLE=alphaask-Messages
-   QUESTIONS_TABLE=alphaask-Questions
-   FAQ_TABLE=alphaask-FAQ
-   ```
-
-5. Start the FastAPI development server:
-   ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-   ```
-
-6. Open interactive API docs in your browser:
-   [http://localhost:8000/docs](http://localhost:8000/docs)
+Ensure you have the following installed on your local machine:
+- **AWS CLI** (configured with `aws configure` using an IAM user with permissions for DynamoDB, ECR, Lambda, API Gateway, and Bedrock)
+- **Terraform v1.5+**
+- **Python 3.11+**
+- **Node.js 20+** & **npm 10+**
+- **Docker Engine** (running locally)
 
 ---
 
-### Step 2.2: Run the Frontend Locally
+## 3. Provision AWS Infrastructure via Terraform
 
-1. Open a new terminal tab and navigate to the `frontend` directory:
-   ```bash
-   cd frontend
-   ```
+Before running backend/frontend services, provision the required AWS resources (DynamoDB tables, ElastiCache Redis, ECR, API Gateway, S3).
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+### Step 3.1: Initialize & Provision ECR Repository
 
-3. Start the Vite development server:
-   ```bash
-   npm run dev
-   ```
+```bash
+cd infra/terraform
+terraform init
+terraform apply -auto-approve -target=aws_ecr_repository.backend
+```
 
-4. Open the web interface in your browser:
-   [http://localhost:5173](http://localhost:5173)
+### Step 3.2: Build & Push Backend Container to ECR
+
+AWS Lambda requires an initial Docker container image in Amazon ECR before function creation. Build with single-architecture `linux/amd64` and `--provenance=false`:
+
+```bash
+# 1. Login to Amazon ECR
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-1.amazonaws.com
+
+# 2. Build backend container image
+cd ../../backend
+docker build --provenance=false --platform linux/amd64 \
+  -t $(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-1.amazonaws.com/alphaask-backend:latest .
+
+# 3. Push container image to ECR
+docker push $(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-1.amazonaws.com/alphaask-backend:latest
+```
+
+### Step 3.3: Deploy Full Infrastructure
+
+```bash
+cd ../infra/terraform
+terraform apply -auto-approve
+```
+
+Save the generated outputs:
+- **`api_gateway_url`**: e.g., `https://4tsuwbgeb3.execute-api.us-east-1.amazonaws.com/`
+- **`frontend_s3_website_url`**: e.g., `http://alphaask-frontend-static-dev.s3-website-us-east-1.amazonaws.com`
 
 ---
 
-### Step 2.3: Test Docker Container Locally
+## 4. Local Backend Setup & Execution
 
-To test the backend container locally before pushing to AWS ECR:
+### Step 4.1: Configure Backend Environment
+
+Create a `.env` file in the `backend/` directory:
+
+```env
+AWS_REGION=us-east-1
+JWT_SECRET_KEY=super-secret-jwt-key-alphaask-2026-production
+BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
+USERS_TABLE=alphaask-Users
+SESSIONS_TABLE=alphaask-Sessions
+MESSAGES_TABLE=alphaask-Messages
+QUESTIONS_TABLE=alphaask-Questions
+FAQ_TABLE=alphaask-FAQ
+REDIS_URL=redis://localhost:6379  # Or use deployed ElastiCache Redis endpoint
+```
+
+### Step 4.2: Install Dependencies & Run FastAPI
 
 ```bash
 cd backend
-docker build -t alphaask-backend .
-docker run -p 8000:8000 \
-  -e AWS_REGION=us-east-1 \
-  -e AWS_ACCESS_KEY_ID=your_key \
-  -e AWS_SECRET_ACCESS_KEY=your_secret \
-  alphaask-backend
+
+# Create and activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install requirements
+pip install -r requirements.txt
+
+# Run pytest unit tests
+pytest
+
+# Start FastAPI development server on port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
----
-
-## 3. Terraform Infrastructure Provisioning Guide
-
-All Infrastructure as Code (IaC) files are located in `infra/terraform/`.
-
-### Step 3.1: Initialize & Plan Terraform
-
-1. Navigate to the Terraform directory:
-   ```bash
-   cd infra/terraform
-   ```
-
-2. Initialize Terraform providers and backend:
-   ```bash
-   terraform init
-   ```
-
-3. Validate Terraform configuration syntax:
-   ```bash
-   terraform validate
-   ```
-
-4. Generate and inspect the deployment plan:
-   ```bash
-   terraform plan
-   ```
+Verify backend health at: [http://localhost:8000/health](http://localhost:8000/health) or API documentation at [http://localhost:8000/docs](http://localhost:8000/docs).
 
 ---
 
-### Step 3.2: Deploy Infrastructure to AWS
+## 5. Local Frontend Setup & Execution
 
-1. Apply the Terraform configuration to provision AWS resources:
-   ```bash
-   terraform apply -auto-approve
-   ```
+### Step 5.1: Configure Frontend API Target
 
-2. Note the generated outputs:
-   - `api_gateway_url`: The public REST endpoint for the backend API.
-   - `ecr_repository_url`: The ECR repository URL for backend container images.
-   - `cloudfront_domain_name`: The CloudFront HTTPS URL for the frontend.
-   - `frontend_s3_bucket`: S3 bucket hosting frontend static build assets.
+Create `.env.local` inside the `frontend/` directory to configure the target backend:
 
----
+```env
+# To connect frontend to local FastAPI server:
+VITE_API_BASE_URL=http://localhost:8000
 
-## 4. GitHub Actions CI/CD Pipelines
+# OR to connect frontend directly to live AWS API Gateway:
+# VITE_API_BASE_URL=https://4tsuwbgeb3.execute-api.us-east-1.amazonaws.com
+```
 
-### 4.1 Deployment Pipeline (`.github/workflows/deploy.yml`)
-Structured into 4 modular jobs:
-1. `test-and-lint`: Runs pytest unit tests & verifies React production build.
-2. `build-and-push-ecr`: Builds Docker container image and pushes to AWS ECR.
-3. `terraform-deploy`: Validates, plans, and applies Terraform IaC.
-4. `update-lambda-and-frontend`: Updates Lambda container code & syncs S3/CloudFront CDN.
-
-### 4.2 Teardown & Destroy Pipeline (`.github/workflows/destroy.yml`)
-Manual workflow triggered via **Actions > AlphaAsk Teardown Infrastructure Pipeline > Run workflow**:
-- Empties S3 bucket & runs `terraform destroy -auto-approve` to safely remove all AWS resources.
-
-### Required GitHub Secrets
-In your GitHub repository under **Settings > Secrets and variables > Actions**, add:
-
-| Secret Name | Description | Example |
-| :--- | :--- | :--- |
-| `AWS_ACCESS_KEY_ID` | IAM User Access Key | `AKIAIOSFODNN7EXAMPLE` |
-| `AWS_SECRET_ACCESS_KEY` | IAM User Secret Key | `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` |
-| `AWS_REGION` | AWS Region | `us-east-1` |
-
----
-
-## 5. Summary of Automated Verification Commands
-
-Run unit tests and build checks anytime using:
+### Step 5.2: Install Dependencies & Run Vite Dev Server
 
 ```bash
-# Backend Pytest
-cd backend && python -m pytest
+cd frontend
 
-# Frontend Build & Typecheck
+# Install Node dependencies
+npm install
+
+# Start Vite development server
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) in your browser to test the UI!
+
+---
+
+## 6. Full End-to-End Verification Flow
+
+1. Open **[http://localhost:5173](http://localhost:5173)** in your browser.
+2. Click **Sign Up** to create a test user account.
+3. Select a subject chip (e.g. **Science** or **Code**) or select a starter prompt.
+4. Send a prompt to AlphaAsk (e.g. *"Explain how recursion works with a Python example"*).
+5. The frontend will communicate with the backend (`/ask`), which invokes **AWS Bedrock Claude 3.5 Sonnet** and returns an AI response with annotations and conversation memory!
+
+---
+
+## 7. Troubleshooting Guide
+
+### Issue 1: "AlphaAsk couldn't reach the model" in Frontend
+- **Cause**: The Vite development server proxy is missing or `VITE_API_BASE_URL` is pointing to an invalid address.
+- **Fix**: Verify `frontend/vite.config.ts` includes the dev server proxy for `/api`, and ensure `backend` is running on `http://localhost:8000` or `VITE_API_BASE_URL` is correctly set in `frontend/.env.local`.
+
+### Issue 2: `InvalidParameterValueException: Reserved keys used in this request: AWS_REGION`
+- **Cause**: Setting `AWS_REGION` under Lambda environment variables in Terraform.
+- **Fix**: `AWS_REGION` is injected automatically by AWS Lambda runtime. Remove `AWS_REGION` from `lambda_apigw.tf` environment variables.
+
+### Issue 3: `InvalidParameterValueException: Image manifest ... not supported`
+- **Cause**: Building Docker images with Docker Buildx multi-arch / OCI index format.
+- **Fix**: Build with `--provenance=false --platform linux/amd64`.
+
+---
+
+## 8. Summary of Quick Commands
+
+```bash
+# 1. Run Pytest Backend Unit Tests
+cd backend && pytest
+
+# 2. Check Frontend Production Build
 cd frontend && npm run build
 
-# Terraform Formatting & Validation
-cd infra/terraform && terraform fmt -check && terraform validate
+# 3. Validate Terraform Configuration
+cd infra/terraform && terraform validate
+
+# 4. Deploy Infrastructure via Terraform
+cd infra/terraform && terraform apply -auto-approve
 ```
+
