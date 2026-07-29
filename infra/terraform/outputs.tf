@@ -13,9 +13,14 @@ output "frontend_s3_bucket" {
   value       = aws_s3_bucket.frontend.id
 }
 
+output "frontend_s3_website_url" {
+  description = "S3 Static Website URL for the frontend application"
+  value       = "http://${aws_s3_bucket_website_configuration.frontend_website.website_endpoint}"
+}
+
 output "cloudfront_domain_name" {
   description = "CloudFront distribution domain name for the frontend application"
-  value       = aws_cloudfront_distribution.frontend_cdn.domain_name
+  value       = var.enable_cloudfront ? aws_cloudfront_distribution.frontend_cdn[0].domain_name : "CloudFront Disabled (Use S3 Website URL)"
 }
 
 output "dynamodb_users_table" {

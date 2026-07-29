@@ -28,3 +28,9 @@ variable "jwt_secret_key" {
   sensitive   = true
   default     = "super-secret-jwt-key-alphaask-2026-production"
 }
+
+variable "enable_cloudfront" {
+  description = "Enable CloudFront CDN distribution (requires AWS account verification)"
+  type        = bool
+  default     = false
+}

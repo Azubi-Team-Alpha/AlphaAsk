@@ -4,12 +4,12 @@ on:
   push:
     branches: [ main, dev ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev ]
 
 jobs:
-  # Job 1: Lint & Unit Tests for Backend and Frontend
-  test-and-lint:
-    name: 1. Test & Lint (Backend & Frontend)
+  # Job 1: Test & Validate Code (Backend, Frontend, Terraform)
+  test-and-validate:
+    name: 1. Test & Validate
     runs-on: ubuntu-latest
 
     steps:
@@ -39,16 +39,22 @@ jobs:
           npm ci
           npm run build
 
-  # Job 2: Build Docker Image & Push to Amazon ECR
-  build-and-push-ecr:
-    name: 2. Build & Push Container to AWS ECR
-    needs: test-and-lint
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-    outputs:
-      ecr_registry: ${{ steps.login-ecr.outputs.registry }}
-      image_tag: ${{ github.sha }}
+      - name: Validate Terraform Configuration
+        run: |
+          cd infra/terraform
+          terraform init -backend=false
+          terraform fmt -check
+          terraform validate
+
+  # Job 2: Build Container, Provision Infrastructure & Deploy Services
+  deploy-to-aws:
+    name: 2. Build & Deploy to AWS Serverless
+    needs: test-and-validate
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
@@ -65,78 +71,34 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build & Push Backend Docker Image
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init & Ensure ECR Repository
+        run: |
+          cd infra/terraform
+          terraform init
+          terraform apply -auto-approve -target=aws_ecr_repository.backend
+
+      - name: Build & Push Backend Docker Image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: alphaask-backend
           IMAGE_TAG: ${{ github.sha }}
         run: |
           cd backend
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker build --provenance=false --platform linux/amd64 \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-  # Job 3: Terraform Infrastructure Provisioning & Deployment
-  terraform-deploy:
-    name: 3. Provision Infrastructure via Terraform
-    needs: build-and-push-ecr
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Format & Validate
+      - name: Terraform Apply Full Infrastructure
         run: |
           cd infra/terraform
-          terraform init
-          terraform fmt -check
-          terraform validate
+          terraform apply -auto-approve
 
-      - name: Terraform Plan
-        run: |
-          cd infra/terraform
-          terraform plan -out=tfplan
-
-      - name: Terraform Apply
-        run: |
-          cd infra/terraform
-          terraform apply -auto-approve tfplan
-
-  # Job 4: Update Lambda Code & Sync Frontend to S3/CloudFront
-  update-lambda-and-frontend:
-    name: 4. Deploy Application Services & Sync CDN
-    needs: [build-and-push-ecr, terraform-deploy]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
-
-      - name: Log in to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Update AWS Lambda Function Image
+      - name: Update AWS Lambda Code
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: alphaask-backend
@@ -144,16 +106,17 @@ jobs:
         run: |
           aws lambda update-function-code \
             --function-name alphaask-backend \
-            --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG || echo "Lambda updated"
+            --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Set up Node.js 20 & Build Frontend
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Deploy Frontend Build to S3 Bucket
+      - name: Deploy Frontend Build to S3
         run: |
           cd frontend
           npm ci
           npm run build
           aws s3 sync dist/ s3://alphaask-frontend-static-dev --delete
+

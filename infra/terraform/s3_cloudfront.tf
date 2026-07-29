@@ -26,8 +26,10 @@ resource "aws_s3_bucket_website_configuration" "frontend_website" {
   }
 }
 
-# CloudFront Distribution for Frontend CDN & SSL
+# Optional CloudFront Distribution for Frontend CDN & SSL
 resource "aws_cloudfront_distribution" "frontend_cdn" {
+  count = var.enable_cloudfront ? 1 : 0
+
   origin {
     domain_name = aws_s3_bucket_website_configuration.frontend_website.website_endpoint
     origin_id   = "S3-${aws_s3_bucket.frontend.id}"
