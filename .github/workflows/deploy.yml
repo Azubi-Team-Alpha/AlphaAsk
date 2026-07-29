@@ -131,10 +131,26 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Terraform Apply Full Infrastructure
+      - name: Terraform Init & Import Existing Resources into State
         run: |
           cd infra/terraform
           terraform init
+          terraform import aws_ecr_repository.backend alphaask-backend || true
+          terraform import aws_iam_role.lambda_exec alphaask-lambda-exec-role || true
+          terraform import aws_dynamodb_table.users alphaask-Users || true
+          terraform import aws_dynamodb_table.sessions alphaask-Sessions || true
+          terraform import aws_dynamodb_table.messages alphaask-Messages || true
+          terraform import aws_dynamodb_table.questions alphaask-Questions || true
+          terraform import aws_dynamodb_table.faq alphaask-FAQ || true
+          terraform import aws_s3_bucket.frontend alphaask-frontend-static-dev || true
+          SG_ID=$(aws ec2 describe-security-groups --group-names alphaask-elasticache-sg --query "SecurityGroups[0].GroupId" --output text 2>/dev/null || true)
+          if [ -n "$SG_ID" ] && [ "$SG_ID" != "None" ]; then
+            terraform import aws_security_group.elasticache_sg $SG_ID || true
+          fi
+
+      - name: Terraform Apply Full Infrastructure
+        run: |
+          cd infra/terraform
           terraform apply -auto-approve
 
       - name: Log in to Amazon ECR
