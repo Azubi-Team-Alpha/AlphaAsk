@@ -30,14 +30,30 @@ class LLMError(Exception):
 
 
 def get_llm_response(conversation_history: list[dict], new_question: str) -> str:
-    # Bedrock's Converse API expects messages as {"role": ..., "content": [{"text": ...}]}
+    # Bedrock's Converse API expects strictly alternating user/assistant messages with non-empty content
     messages = []
+    last_role = None
+
     for msg in conversation_history:
-        messages.append({
-            "role": msg["role"] if msg["role"] in ("user", "assistant") else "user",
-            "content": [{"text": msg["content"]}],
-        })
-    messages.append({"role": "user", "content": [{"text": new_question}]})
+        role = "user" if msg.get("role") not in ("user", "assistant") else msg.get("role")
+        content = (msg.get("content") or "").strip()
+        if not content:
+            continue
+        if role == last_role:
+            if messages:
+                messages[-1]["content"][0]["text"] += f"\n{content}"
+            continue
+        messages.append({"role": role, "content": [{"text": content}]})
+        last_role = role
+
+    question = new_question.strip()
+    if not question:
+        question = "Hello"
+
+    if last_role == "user" and messages:
+        messages[-1]["content"][0]["text"] += f"\n{question}"
+    else:
+        messages.append({"role": "user", "content": [{"text": question}]})
 
     model_candidates = [
         settings.bedrock_model_id,
@@ -63,7 +79,8 @@ def get_llm_response(conversation_history: list[dict], new_question: str) -> str
             return response["output"]["message"]["content"][0]["text"]
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "")
-            if error_code == "ResourceNotFoundException" and model_id != model_ids[-1]:
+            if error_code in ("ResourceNotFoundException", "ValidationException") and model_id != model_ids[-1]:
+                last_exception = e
                 continue
             last_exception = e
             break
@@ -75,10 +92,11 @@ def get_llm_response(conversation_history: list[dict], new_question: str) -> str
         raise LLMError("The AI took too long to respond. Please try again.")
     elif isinstance(last_exception, ClientError):
         error_code = last_exception.response.get("Error", {}).get("Code", "")
+        error_msg = last_exception.response.get("Error", {}).get("Message", "")
         if error_code == "ThrottlingException":
             raise LLMError("The AI service is currently busy. Please try again shortly.")
         if error_code == "ValidationException":
-            raise LLMError("The request could not be processed. Please rephrase your question.")
-        raise LLMError(f"AI service error: {error_code}")
+            raise LLMError(f"Validation error ({error_msg or 'Invalid request'}). Please rephrase your question.")
+        raise LLMError(f"AI service error: {error_code} ({error_msg})")
     else:
         raise LLMError(f"Unexpected AI service error: {str(last_exception or 'Unknown error')}")
