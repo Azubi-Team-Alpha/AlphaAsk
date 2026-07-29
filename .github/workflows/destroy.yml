@@ -30,7 +30,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          aws-region: us-east-1
 
       - name: Empty S3 Frontend Bucket Before Destruction
         run: |
@@ -43,13 +43,52 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Terraform Init
+      - name: Terraform Init & Import Existing Resources into State Before Destroy
         run: |
           cd infra/terraform
           terraform init
+          ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text 2>/dev/null || echo "")
+
+          # ECR & IAM
+          terraform import -lock=false aws_ecr_repository.backend alphaask-backend || true
+          terraform import -lock=false aws_iam_role.lambda_exec alphaask-lambda-exec-role || true
+          if [ -n "$ACCOUNT_ID" ]; then
+            terraform import -lock=false aws_iam_policy.lambda_services_access arn:aws:iam::${ACCOUNT_ID}:policy/alphaask-services-policy || true
+            terraform import -lock=false aws_iam_role_policy_attachment.lambda_basic_execution alphaask-lambda-exec-role/arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole || true
+            terraform import -lock=false aws_iam_role_policy_attachment.lambda_services_attach alphaask-lambda-exec-role/arn:aws:iam::${ACCOUNT_ID}:policy/alphaask-services-policy || true
+          fi
+
+          # DynamoDB Tables
+          terraform import -lock=false aws_dynamodb_table.users alphaask-Users || true
+          terraform import -lock=false aws_dynamodb_table.sessions alphaask-Sessions || true
+          terraform import -lock=false aws_dynamodb_table.messages alphaask-Messages || true
+          terraform import -lock=false aws_dynamodb_table.questions alphaask-Questions || true
+          terraform import -lock=false aws_dynamodb_table.faq alphaask-FAQ || true
+
+          # Lambda Function
+          terraform import -lock=false aws_lambda_function.backend alphaask-backend || true
+
+          # S3 Bucket & Policy
+          terraform import -lock=false aws_s3_bucket.frontend alphaask-frontend-static-dev || true
+          terraform import -lock=false aws_s3_bucket_public_access_block.frontend_public alphaask-frontend-static-dev || true
+          terraform import -lock=false aws_s3_bucket_website_configuration.frontend_website alphaask-frontend-static-dev || true
+          terraform import -lock=false aws_s3_bucket_policy.frontend_policy alphaask-frontend-static-dev || true
+
+          # ElastiCache Redis & Security Group
+          SG_ID=$(aws ec2 describe-security-groups --group-names alphaask-elasticache-sg --query "SecurityGroups[0].GroupId" --output text 2>/dev/null || true)
+          if [ -n "$SG_ID" ] && [ "$SG_ID" != "None" ]; then
+            terraform import -lock=false aws_security_group.elasticache_sg $SG_ID || true
+          fi
+          terraform import -lock=false aws_elasticache_cluster.redis alphaask-redis || true
+
+          # API Gateway
+          API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='alphaask-api'].ApiId | [0]" --output text 2>/dev/null || true)
+          if [ -n "$API_ID" ] && [ "$API_ID" != "None" ]; then
+            terraform import -lock=false aws_apigatewayv2_api.http_api $API_ID || true
+            terraform import -lock=false aws_apigatewayv2_stage.default $API_ID/\$default || true
+          fi
 
       - name: Terraform Destroy Infrastructure
         run: |
           cd infra/terraform
           terraform destroy -auto-approve
-
