@@ -39,24 +39,46 @@ def get_llm_response(conversation_history: list[dict], new_question: str) -> str
         })
     messages.append({"role": "user", "content": [{"text": new_question}]})
 
-    try:
-        client = get_bedrock_client()
-        response = client.converse(
-            modelId=settings.bedrock_model_id,
-            system=[{"text": SYSTEM_PROMPT}],
-            messages=messages,
-            inferenceConfig={"maxTokens": 1024, "temperature": 0.3},
-        )
-        return response["output"]["message"]["content"][0]["text"]
+    model_candidates = [
+        settings.bedrock_model_id,
+        "us.anthropic.claude-3-5-sonnet-20240620-v1:0",
+        "us.anthropic.claude-3-haiku-20240307-v1:0",
+        "amazon.titan-text-express-v1",
+    ]
+    # Remove duplicates preserving order
+    seen = set()
+    model_ids = [m for m in model_candidates if m and not (m in seen or seen.add(m))]
 
-    except ReadTimeoutError:
+    client = get_bedrock_client()
+    last_exception = None
+
+    for model_id in model_ids:
+        try:
+            response = client.converse(
+                modelId=model_id,
+                system=[{"text": SYSTEM_PROMPT}],
+                messages=messages,
+                inferenceConfig={"maxTokens": 1024, "temperature": 0.3},
+            )
+            return response["output"]["message"]["content"][0]["text"]
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code", "")
+            if error_code == "ResourceNotFoundException" and model_id != model_ids[-1]:
+                continue
+            last_exception = e
+            break
+        except Exception as e:
+            last_exception = e
+            break
+
+    if isinstance(last_exception, ReadTimeoutError):
         raise LLMError("The AI took too long to respond. Please try again.")
-    except ClientError as e:
-        error_code = e.response.get("Error", {}).get("Code", "")
+    elif isinstance(last_exception, ClientError):
+        error_code = last_exception.response.get("Error", {}).get("Code", "")
         if error_code == "ThrottlingException":
             raise LLMError("The AI service is currently busy. Please try again shortly.")
         if error_code == "ValidationException":
             raise LLMError("The request could not be processed. Please rephrase your question.")
         raise LLMError(f"AI service error: {error_code}")
-    except Exception as e:
-        raise LLMError(f"Unexpected AI service error: {str(e)}")
+    else:
+        raise LLMError(f"Unexpected AI service error: {str(last_exception or 'Unknown error')}")

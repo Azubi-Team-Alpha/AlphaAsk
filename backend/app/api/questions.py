@@ -6,7 +6,7 @@ from app.db.dynamodb import dynamodb_service
 from app.core.deps import get_current_user
 from app.schemas.ask import QuestionOut, FAQOut
 
-router = APIRouter(prefix="/question", tags=["questions"])
+router = APIRouter(prefix="/questions", tags=["questions"])
 
 
 @router.get("", response_model=List[QuestionOut])
