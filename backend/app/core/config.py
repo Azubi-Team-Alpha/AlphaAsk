@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     # AWS / Bedrock
     bedrock_model_id: str = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
 
+    # External Fallback AI Keys
+    gemini_api_key: str = ""
+    groq_api_key: str = ""
+
     # Rate limiting
     rate_limit_per_minute: int = 10
 

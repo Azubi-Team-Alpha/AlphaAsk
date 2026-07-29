@@ -1,3 +1,6 @@
+import json
+import urllib.request
+import urllib.error
 import boto3
 from botocore.exceptions import ClientError, ReadTimeoutError
 from botocore.config import Config
@@ -27,6 +30,89 @@ SYSTEM_PROMPT = (
 class LLMError(Exception):
     """Raised when the LLM call fails after our own error handling."""
     pass
+
+
+def call_gemini_api(conversation_history: list[dict], new_question: str) -> str:
+    if not settings.gemini_api_key:
+        raise LLMError("GEMINI_API_KEY is not configured.")
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.gemini_api_key}"
+
+    contents = []
+    for msg in conversation_history:
+        role = "user" if msg.get("role") == "user" else "model"
+        content = (msg.get("content") or "").strip()
+        if content:
+            contents.append({"role": role, "parts": [{"text": content}]})
+
+    question = new_question.strip() or "Hello"
+    contents.append({"role": "user", "parts": [{"text": question}]})
+
+    payload = {
+        "system_instruction": {
+            "parts": [{"text": SYSTEM_PROMPT}]
+        },
+        "contents": contents,
+        "generationConfig": {
+            "temperature": 0.3,
+            "maxOutputTokens": 1024
+        }
+    }
+
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+    except Exception as e:
+        raise LLMError(f"Gemini API call failed: {str(e)}")
+
+
+def call_groq_api(conversation_history: list[dict], new_question: str) -> str:
+    if not settings.groq_api_key:
+        raise LLMError("GROQ_API_KEY is not configured.")
+
+    url = "https://api.groq.com/openai/v1/chat/completions"
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for msg in conversation_history:
+        role = "user" if msg.get("role") == "user" else "assistant"
+        content = (msg.get("content") or "").strip()
+        if content:
+            messages.append({"role": role, "content": content})
+
+    question = new_question.strip() or "Hello"
+    messages.append({"role": "user", "content": question})
+
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": messages,
+        "temperature": 0.3,
+        "max_tokens": 1024
+    }
+
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {settings.groq_api_key}"
+        },
+        method="POST"
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return data["choices"][0]["message"]["content"]
+    except Exception as e:
+        raise LLMError(f"Groq API call failed: {str(e)}")
 
 
 def get_academic_fallback_response(question: str) -> str:
@@ -93,7 +179,6 @@ def get_academic_fallback_response(question: str) -> str:
 
 
 def get_llm_response(conversation_history: list[dict], new_question: str) -> str:
-    # Bedrock's Converse API expects strictly alternating user/assistant messages with non-empty content
     messages = []
     last_role = None
 
@@ -109,9 +194,7 @@ def get_llm_response(conversation_history: list[dict], new_question: str) -> str
         messages.append({"role": role, "content": [{"text": content}]})
         last_role = role
 
-    question = new_question.strip()
-    if not question:
-        question = "Hello"
+    question = new_question.strip() or "Hello"
 
     if last_role == "user" and messages:
         messages[-1]["content"][0]["text"] += f"\n{question}"
@@ -150,6 +233,26 @@ def get_llm_response(conversation_history: list[dict], new_question: str) -> str
             last_exception = e
             break
 
-    # If Bedrock models encounter access restrictions or errors, return the intelligent academic fallback response
-    print(f"Bedrock models unavailable ({last_exception}). Falling back to Academic Engine.")
+    print(f"Bedrock models unavailable ({last_exception}). Checking Gemini API fallback...")
+
+    # 2. Try Google Gemini API Fallback (Option 1)
+    if settings.gemini_api_key:
+        try:
+            res = call_gemini_api(conversation_history, new_question)
+            print("Successfully retrieved AI response from Google Gemini API!")
+            return res
+        except Exception as gemini_err:
+            print(f"Gemini API error: {gemini_err}")
+
+    # 3. Try Groq Cloud API Fallback (Option 3)
+    if settings.groq_api_key:
+        try:
+            res = call_groq_api(conversation_history, new_question)
+            print("Successfully retrieved AI response from Groq Cloud API!")
+            return res
+        except Exception as groq_err:
+            print(f"Groq API error: {groq_err}")
+
+    # 4. Built-in Academic AI Generator Fallback
+    print("External APIs unavailable. Falling back to Academic Engine.")
     return get_academic_fallback_response(question)

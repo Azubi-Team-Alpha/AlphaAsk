@@ -34,3 +34,17 @@ variable "enable_cloudfront" {
   type        = bool
   default     = false
 }
+
+variable "gemini_api_key" {
+  description = "Google Gemini API key for fallback LLM responses"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "groq_api_key" {
+  description = "Groq Cloud API key for fallback LLM responses"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
