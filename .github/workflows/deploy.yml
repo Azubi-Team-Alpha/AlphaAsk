@@ -79,7 +79,7 @@ jobs:
   build-and-push-container:
     name: 3. Build & Push Docker Image
     needs: provision-base-infra
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/heads/feat/'))
     runs-on: ubuntu-latest
 
     steps:
@@ -114,7 +114,7 @@ jobs:
   deploy-app-and-frontend:
     name: 4. Deploy Infrastructure & Frontend Assets
     needs: build-and-push-container
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/heads/feat/'))
     runs-on: ubuntu-latest
 
     steps:
