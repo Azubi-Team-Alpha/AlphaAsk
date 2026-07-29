@@ -78,21 +78,9 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Terraform Init & Provision Prerequisite Base Infrastructure
+      - name: Ensure ECR Repository Exists
         run: |
-          cd infra/terraform
-          terraform init
-          terraform apply -auto-approve \
-            -target=aws_ecr_repository.backend \
-            -target=aws_iam_role.lambda_exec \
-            -target=aws_dynamodb_table.users \
-            -target=aws_dynamodb_table.sessions \
-            -target=aws_dynamodb_table.messages \
-            -target=aws_dynamodb_table.questions \
-            -target=aws_dynamodb_table.faq \
-            -target=aws_security_group.elasticache_sg \
-            -target=aws_elasticache_cluster.redis \
-            -target=aws_s3_bucket.frontend
+          aws ecr create-repository --repository-name alphaask-backend --image-scanning-configuration scanOnPush=true --image-tag-mutability MUTABLE || echo "ECR repository already exists"
 
       - name: Build & Push Backend Docker Image to ECR
         env:
@@ -110,6 +98,7 @@ jobs:
       - name: Terraform Apply Full Infrastructure
         run: |
           cd infra/terraform
+          terraform init
           terraform apply -auto-approve
 
       - name: Update AWS Lambda Code
