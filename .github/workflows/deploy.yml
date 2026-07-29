@@ -7,7 +7,7 @@ on:
     branches: [ main, dev ]
 
 jobs:
-  # Job 1: Test & Validate Code (Backend, Frontend, Terraform)
+  # Stage 1: Test & Validate Code (Backend, Frontend, Terraform)
   test-and-validate:
     name: 1. Test & Validate
     runs-on: ubuntu-latest
@@ -53,10 +53,32 @@ jobs:
           terraform fmt -check
           terraform validate
 
-  # Job 2: Build Container, Provision Infrastructure & Deploy Services
-  deploy-to-aws:
-    name: 2. Build & Deploy to AWS Serverless
+  # Stage 2: Provision Foundational ECR Infrastructure
+  provision-base-infra:
+    name: 2. Provision ECR Repository
     needs: test-and-validate
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Ensure ECR Repository Exists
+        run: |
+          aws ecr create-repository --repository-name alphaask-backend --image-scanning-configuration scanOnPush=true --image-tag-mutability MUTABLE || echo "ECR repository already exists"
+
+  # Stage 3: Build & Push Backend Container Image
+  build-and-push-container:
+    name: 3. Build & Push Docker Image
+    needs: provision-base-infra
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
     runs-on: ubuntu-latest
 
@@ -75,13 +97,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Ensure ECR Repository Exists
-        run: |
-          aws ecr create-repository --repository-name alphaask-backend --image-scanning-configuration scanOnPush=true --image-tag-mutability MUTABLE || echo "ECR repository already exists"
-
       - name: Build & Push Backend Docker Image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -95,11 +110,36 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
+  # Stage 4: Deploy Application Infrastructure & Frontend Web Assets
+  deploy-app-and-frontend:
+    name: 4. Deploy Infrastructure & Frontend Assets
+    needs: build-and-push-container
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
       - name: Terraform Apply Full Infrastructure
         run: |
           cd infra/terraform
           terraform init
           terraform apply -auto-approve
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Update AWS Lambda Code
         env:
@@ -122,4 +162,3 @@ jobs:
           npm ci
           npm run build
           aws s3 sync dist/ s3://alphaask-frontend-static-dev --delete
-
