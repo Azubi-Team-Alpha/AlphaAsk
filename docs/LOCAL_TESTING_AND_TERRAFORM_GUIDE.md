@@ -149,9 +149,18 @@ All Infrastructure as Code (IaC) files are located in `infra/terraform/`.
 
 ---
 
-## 4. GitHub Actions CI/CD Setup
+## 4. GitHub Actions CI/CD Pipelines
 
-The workflow file is configured in `.github/workflows/deploy.yml`.
+### 4.1 Deployment Pipeline (`.github/workflows/deploy.yml`)
+Structured into 4 modular jobs:
+1. `test-and-lint`: Runs pytest unit tests & verifies React production build.
+2. `build-and-push-ecr`: Builds Docker container image and pushes to AWS ECR.
+3. `terraform-deploy`: Validates, plans, and applies Terraform IaC.
+4. `update-lambda-and-frontend`: Updates Lambda container code & syncs S3/CloudFront CDN.
+
+### 4.2 Teardown & Destroy Pipeline (`.github/workflows/destroy.yml`)
+Manual workflow triggered via **Actions > AlphaAsk Teardown Infrastructure Pipeline > Run workflow**:
+- Empties S3 bucket & runs `terraform destroy -auto-approve` to safely remove all AWS resources.
 
 ### Required GitHub Secrets
 In your GitHub repository under **Settings > Secrets and variables > Actions**, add:
