@@ -32,6 +32,50 @@ class LLMError(Exception):
     pass
 
 
+def call_groq_api(conversation_history: list[dict], new_question: str) -> str:
+    if not settings.groq_api_key:
+        raise LLMError("GROQ_API_KEY is not configured.")
+
+    url = "https://api.groq.com/openai/v1/chat/completions"
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for msg in conversation_history:
+        role = "user" if msg.get("role") == "user" else "assistant"
+        content = (msg.get("content") or "").strip()
+        if content:
+            messages.append({"role": role, "content": content})
+
+    question = new_question.strip() or "Hello"
+    messages.append({"role": "user", "content": question})
+
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": messages,
+        "temperature": 0.3,
+        "max_tokens": 1024
+    }
+
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {settings.groq_api_key}"
+        },
+        method="POST"
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return data["choices"][0]["message"]["content"]
+    except urllib.error.HTTPError as err:
+        err_body = err.read().decode("utf-8", errors="ignore")
+        raise LLMError(f"Groq API Error ({err.code}): {err_body[:200]}")
+    except Exception as e:
+        raise LLMError(f"Groq API network error: {str(e)}")
+
+
 def call_gemini_api(conversation_history: list[dict], new_question: str) -> str:
     if not settings.gemini_api_key:
         raise LLMError("GEMINI_API_KEY is not configured.")
@@ -70,115 +114,14 @@ def call_gemini_api(conversation_history: list[dict], new_question: str) -> str:
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             return data["candidates"][0]["content"]["parts"][0]["text"]
+    except urllib.error.HTTPError as err:
+        err_body = err.read().decode("utf-8", errors="ignore")
+        raise LLMError(f"Gemini API Error ({err.code}): {err_body[:200]}")
     except Exception as e:
-        raise LLMError(f"Gemini API call failed: {str(e)}")
+        raise LLMError(f"Gemini API network error: {str(e)}")
 
 
-def call_groq_api(conversation_history: list[dict], new_question: str) -> str:
-    if not settings.groq_api_key:
-        raise LLMError("GROQ_API_KEY is not configured.")
-
-    url = "https://api.groq.com/openai/v1/chat/completions"
-
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    for msg in conversation_history:
-        role = "user" if msg.get("role") == "user" else "assistant"
-        content = (msg.get("content") or "").strip()
-        if content:
-            messages.append({"role": role, "content": content})
-
-    question = new_question.strip() or "Hello"
-    messages.append({"role": "user", "content": question})
-
-    payload = {
-        "model": "llama-3.3-70b-versatile",
-        "messages": messages,
-        "temperature": 0.3,
-        "max_tokens": 1024
-    }
-
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {settings.groq_api_key}"
-        },
-        method="POST"
-    )
-
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            return data["choices"][0]["message"]["content"]
-    except Exception as e:
-        raise LLMError(f"Groq API call failed: {str(e)}")
-
-
-def get_academic_fallback_response(question: str) -> str:
-    q_lower = question.lower().strip()
-
-    if "devops" in q_lower:
-        return (
-            "### What is DevOps?\n\n"
-            "**DevOps** is a set of practices, cultural philosophies, and software engineering tools that combines **Software Development (Dev)** and **IT Operations (Ops)**. "
-            "Its goal is to shorten the systems development lifecycle and provide continuous delivery with high software quality.\n\n"
-            "#### Key Pillars of DevOps:\n"
-            "1. **Continuous Integration & Continuous Delivery (CI/CD)**: Automating code testing, building, and deployment pipelines (e.g., GitHub Actions, Jenkins).\n"
-            "2. **Infrastructure as Code (IaC)**: Provisioning cloud infrastructure using code configurations rather than manual setups (e.g., Terraform, AWS CloudFormation).\n"
-            "3. **Microservices & Containerization**: Structuring applications as decoupled services deployed inside containers (e.g., Docker, Kubernetes).\n"
-            "4. **Monitoring & Logging**: Tracking real-time performance, metrics, and application logs (e.g., CloudWatch, Prometheus, Grafana).\n\n"
-            "#### Primary Benefits:\n"
-            "- **Speed**: Rapid delivery of features and bug fixes.\n"
-            "- **Reliability**: Automated testing ensures quality before deployment.\n"
-            "- **Scale**: Manage infrastructure and applications efficiently at scale."
-        )
-    elif "quantum" in q_lower:
-        return (
-            "### What is Quantum Computing?\n\n"
-            "**Quantum Computing** is an advanced paradigm that harnesses the laws of quantum mechanics to solve complex problems exponentially faster than classical computers.\n\n"
-            "#### Core Principles:\n"
-            "1. **Qubits (Quantum Bits)**: Unlike classical bits (0 or 1), qubits can exist in a state of **superposition** (both 0 and 1 simultaneously).\n"
-            "2. **Entanglement**: Qubits can become interconnected such that the state of one instantly influences another across distance.\n"
-            "3. **Quantum Parallelism**: Processes vast numbers of mathematical possibilities simultaneously.\n\n"
-            "#### Practical Applications:\n"
-            "- **Cryptography**: Quantum key distribution and post-quantum encryption.\n"
-            "- **Drug Discovery**: Simulating molecular structures at the subatomic level.\n"
-            "- **Optimization**: Solving complex logistics and financial portfolio problems."
-        )
-    elif "python" in q_lower or "code" in q_lower or "programming" in q_lower or "function" in q_lower:
-        return (
-            "### Computer Science & Software Engineering\n\n"
-            "Computer Science is the study of computation, algorithmic problem solving, data structures, and software architecture.\n\n"
-            "#### Essential Concepts:\n"
-            "1. **Algorithms & Complexity**: Designing efficient step-by-step methods and analyzing Time/Space complexity (Big-O notation).\n"
-            "2. **Data Structures**: Organizing data effectively using Arrays, Hash Tables, Trees, Graphs, and Queues.\n"
-            "3. **Clean Code Principles**: Modular design, DRY (Don't Repeat Yourself), and test-driven development (TDD).\n\n"
-            "*Feel free to share a specific code snippet or problem statement for step-by-step assistance!*"
-        )
-    elif "math" in q_lower or "calculus" in q_lower or "algebra" in q_lower:
-        return (
-            "### Academic Mathematics Support\n\n"
-            "Mathematics provides the foundational language for computer science, statistics, and engineering.\n\n"
-            "#### Core Areas:\n"
-            "1. **Linear Algebra**: Vector spaces, matrices, and linear transformations underpinning AI and Machine Learning.\n"
-            "2. **Calculus & Optimization**: Rates of change (derivatives) and accumulation (integrals) used in gradient descent.\n"
-            "3. **Discrete Mathematics**: Logic, graph theory, and set theory underlying computer algorithms.\n\n"
-            "*Please share your math problem or formula for step-by-step resolution!*"
-        )
-
-    topic = question.strip().rstrip("?").capitalize()
-    return (
-        f"### Academic Support: {topic}\n\n"
-        f"Here is a structured academic overview on **{topic}**:\n\n"
-        "1. **Fundamental Definition**: Core concepts, definitions, and academic principles associated with the subject.\n"
-        "2. **Key Methodologies**: Systematic approaches, critical analysis frameworks, and research methodologies.\n"
-        "3. **Practical Application**: Connecting theoretical principles to real-world engineering, scientific, or academic problem solving.\n\n"
-        "*Feel free to ask specific follow-up questions or request code examples, formulas, or essay outlines!*"
-    )
-
-
-def get_llm_response(conversation_history: list[dict], new_question: str) -> str:
+def call_bedrock_api(conversation_history: list[dict], new_question: str) -> str:
     messages = []
     last_role = None
 
@@ -233,26 +176,42 @@ def get_llm_response(conversation_history: list[dict], new_question: str) -> str
             last_exception = e
             break
 
-    print(f"Bedrock models unavailable ({last_exception}). Checking Gemini API fallback...")
+    if isinstance(last_exception, ReadTimeoutError):
+        raise LLMError("AWS Bedrock: The AI took too long to respond.")
+    elif isinstance(last_exception, ClientError):
+        error_code = last_exception.response.get("Error", {}).get("Code", "")
+        error_msg = last_exception.response.get("Error", {}).get("Message", "")
+        raise LLMError(f"AWS Bedrock Error ({error_code}): {error_msg}")
+    else:
+        raise LLMError(f"AWS Bedrock Exception: {str(last_exception or 'Unknown error')}")
 
-    # 2. Try Google Gemini API Fallback (Option 1)
-    if settings.gemini_api_key:
-        try:
-            res = call_gemini_api(conversation_history, new_question)
-            print("Successfully retrieved AI response from Google Gemini API!")
-            return res
-        except Exception as gemini_err:
-            print(f"Gemini API error: {gemini_err}")
 
-    # 3. Try Groq Cloud API Fallback (Option 3)
+def get_llm_response(conversation_history: list[dict], new_question: str) -> str:
+    errors = []
+
+    # 1. Try Groq Cloud API (Option 3) if key provided
     if settings.groq_api_key:
         try:
-            res = call_groq_api(conversation_history, new_question)
-            print("Successfully retrieved AI response from Groq Cloud API!")
-            return res
-        except Exception as groq_err:
-            print(f"Groq API error: {groq_err}")
+            return call_groq_api(conversation_history, new_question)
+        except Exception as e:
+            print(f"Groq API failed: {e}")
+            errors.append(str(e))
 
-    # 4. Built-in Academic AI Generator Fallback
-    print("External APIs unavailable. Falling back to Academic Engine.")
-    return get_academic_fallback_response(question)
+    # 2. Try Google Gemini API (Option 1) if key provided
+    if settings.gemini_api_key:
+        try:
+            return call_gemini_api(conversation_history, new_question)
+        except Exception as e:
+            print(f"Gemini API failed: {e}")
+            errors.append(str(e))
+
+    # 3. Try AWS Bedrock API
+    try:
+        return call_bedrock_api(conversation_history, new_question)
+    except Exception as e:
+        print(f"Bedrock API failed: {e}")
+        errors.append(str(e))
+
+    # Raise error detailing live API failure reasons
+    combined_err = " | ".join(errors) if errors else "No AI API providers configured."
+    raise LLMError(f"Live AI APIs unavailable: {combined_err}")
