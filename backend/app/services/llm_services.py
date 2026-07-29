@@ -71,12 +71,15 @@ def get_llm_response(conversation_history: list[dict], new_question: str) -> str
 
     for model_id in model_ids:
         try:
-            response = client.converse(
-                modelId=model_id,
-                system=[{"text": SYSTEM_PROMPT}],
-                messages=messages,
-                inferenceConfig={"maxTokens": 1024, "temperature": 0.3},
-            )
+            kwargs = {
+                "modelId": model_id,
+                "messages": messages,
+                "inferenceConfig": {"maxTokens": 1024, "temperature": 0.3},
+            }
+            if "anthropic" in model_id.lower():
+                kwargs["system"] = [{"text": SYSTEM_PROMPT}]
+
+            response = client.converse(**kwargs)
             return response["output"]["message"]["content"][0]["text"]
         except ClientError as e:
             last_exception = e
@@ -92,6 +95,8 @@ def get_llm_response(conversation_history: list[dict], new_question: str) -> str
         error_msg = last_exception.response.get("Error", {}).get("Message", "")
         if error_code == "ThrottlingException":
             raise LLMError("The AI service is currently busy. Please try again shortly.")
+        if "Operation not allowed" in error_msg or "AccessDenied" in error_code:
+            raise LLMError("AWS Bedrock Model Access is pending in AWS account 438776351319. Please enable model access in AWS Bedrock Console (us-east-1).")
         if error_code == "ValidationException":
             raise LLMError(f"Validation error ({error_msg or 'Invalid request'}). Please rephrase your question.")
         raise LLMError(f"AI service error: {error_code} ({error_msg})")

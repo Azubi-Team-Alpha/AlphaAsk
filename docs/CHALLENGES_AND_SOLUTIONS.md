@@ -147,4 +147,20 @@ Restructured [.github/workflows/deploy.yml](file:///home/haadi/Desktop/AWS%20Clo
 
 ---
 
+## 8. AWS Bedrock Model Access Approvals & System Parameter Incompatibility (`Validation error (Operation not allowed)`)
+
+### Problem Statement
+Sending questions to Bedrock produced a runtime validation error:
+`Validation error (Operation not allowed). Please rephrase your question.`
+
+### Root Cause
+1. In AWS Bedrock, Amazon Titan and Nova models do not accept the `system` parameter in the `converse` API payload. Passing `system=[{"text": SYSTEM_PROMPT}]` to non-Anthropic models triggers `Validation error (Operation not allowed)`.
+2. Anthropic models (Claude 3.5 Sonnet / Claude 3 Haiku) require explicit **Model Access approval** in the AWS Bedrock Console for AWS Account `438776351319` in region `us-east-1`.
+
+### Solution & Resolution
+1. Updated [backend/app/services/llm_services.py](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/backend/app/services/llm_services.py) to pass `system` parameters conditionally only for Anthropic models (`if "anthropic" in model_id.lower()`).
+2. Implemented clear diagnostic error reporting indicating when Model Access approval is pending in AWS Bedrock Console.
+
+---
+
 > *Note: This document is continuously updated whenever new technical challenges or infrastructure edge-cases are addressed.*
