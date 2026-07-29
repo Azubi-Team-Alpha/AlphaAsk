@@ -1,6 +1,8 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
     # DynamoDB
     dynamodb_endpoint: str = ""
     aws_region: str = "us-east-1"
@@ -28,7 +30,7 @@ class Settings(BaseSettings):
     questions_table: str = "alphaask-Questions"
     faq_table: str = "alphaask-FAQ"
 
-    class Config:
-        env_file = ".env"
+    # Legacy / Optional fallback
+    database_url: str = ""
 
 settings = Settings()
