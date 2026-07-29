@@ -169,12 +169,28 @@ jobs:
           fi
           terraform import -lock=false aws_elasticache_cluster.redis alphaask-redis || true
 
-          # API Gateway
+          # API Gateway, Stage, Integrations & Routes
           API_ID=$(aws apigatewayv2 get-apis --query "Items[?Name=='alphaask-api'].ApiId | [0]" --output text 2>/dev/null || true)
           if [ -n "$API_ID" ] && [ "$API_ID" != "None" ]; then
             terraform import -lock=false aws_apigatewayv2_api.http_api $API_ID || true
             terraform import -lock=false aws_apigatewayv2_stage.default $API_ID/\$default || true
+
+            INTEG_ID=$(aws apigatewayv2 get-integrations --api-id $API_ID --query "Items[0].IntegrationId" --output text 2>/dev/null || true)
+            if [ -n "$INTEG_ID" ] && [ "$INTEG_ID" != "None" ]; then
+              terraform import -lock=false aws_apigatewayv2_integration.lambda_integration $API_ID/$INTEG_ID || true
+            fi
+
+            ANY_ROUTE_ID=$(aws apigatewayv2 get-routes --api-id $API_ID --query "Items[?RouteKey=='ANY /{proxy+}'].RouteId | [0]" --output text 2>/dev/null || true)
+            if [ -n "$ANY_ROUTE_ID" ] && [ "$ANY_ROUTE_ID" != "None" ]; then
+              terraform import -lock=false aws_apigatewayv2_route.any_route $API_ID/$ANY_ROUTE_ID || true
+            fi
+
+            DEF_ROUTE_ID=$(aws apigatewayv2 get-routes --api-id $API_ID --query "Items[?RouteKey=='\$default'].RouteId | [0]" --output text 2>/dev/null || true)
+            if [ -n "$DEF_ROUTE_ID" ] && [ "$DEF_ROUTE_ID" != "None" ]; then
+              terraform import -lock=false aws_apigatewayv2_route.default_route $API_ID/$DEF_ROUTE_ID || true
+            fi
           fi
+          terraform import -lock=false aws_lambda_permission.apigw_permission alphaask-backend/AllowExecutionFromAPIGateway || true
 
       - name: Terraform Apply Full Infrastructure
         run: |
