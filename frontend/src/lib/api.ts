@@ -1,5 +1,7 @@
 import type { AuthPayload, CurrentUser, Conversation, FAQ, Question } from "../types";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+
 let authToken: string | null = localStorage.getItem("alphaask_token");
 
 export function setToken(token: string | null) {
@@ -20,13 +22,13 @@ function getHeaders(): Record<string, string> {
 }
 
 export async function fetchConversations(): Promise<Conversation[]> {
-  const res = await fetch("/api/conversations", { headers: getHeaders() });
+  const res = await fetch(`${API_BASE}/api/conversations`, { headers: getHeaders() });
   if (!res.ok) return [];
   return res.json();
 }
 
 export async function createSession(): Promise<string> {
-  const res = await fetch("/api/sessions", {
+  const res = await fetch(`${API_BASE}/api/sessions`, {
     method: "POST",
     headers: getHeaders(),
   });
@@ -38,7 +40,7 @@ export async function createSession(): Promise<string> {
 }
 
 export async function authenticate(payload: AuthPayload): Promise<CurrentUser> {
-  const endpoint = payload.mode === "login" ? "/api/auth/login" : "/api/auth/register";
+  const endpoint = payload.mode === "login" ? `${API_BASE}/api/auth/login` : `${API_BASE}/api/auth/register`;
   const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -74,7 +76,7 @@ export async function askAlphaAsk(
   session_id?: string
 ) {
   const sid = session_id || crypto.randomUUID();
-  const res = await fetch("/api/ask", {
+  const res = await fetch(`${API_BASE}/api/ask`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({ question, session_id: sid }),
@@ -87,19 +89,19 @@ export async function askAlphaAsk(
 }
 
 export async function fetchFAQ(): Promise<FAQ[]> {
-  const res = await fetch("/api/FAQ", { headers: getHeaders() });
+  const res = await fetch(`${API_BASE}/api/FAQ`, { headers: getHeaders() });
   if (!res.ok) return [];
   return res.json();
 }
 
 export async function fetchQuestions(): Promise<Question[]> {
-  const res = await fetch("/api/questions", { headers: getHeaders() });
+  const res = await fetch(`${API_BASE}/api/questions`, { headers: getHeaders() });
   if (!res.ok) return [];
   return res.json();
 }
 
 export async function deleteQuestion(id: string): Promise<void> {
-  const res = await fetch(`/api/questions/${id}`, {
+  const res = await fetch(`${API_BASE}/api/questions/${id}`, {
     method: "DELETE",
     headers: getHeaders(),
   });
@@ -107,4 +109,3 @@ export async function deleteQuestion(id: string): Promise<void> {
     throw new Error("Failed to delete question");
   }
 }
-
