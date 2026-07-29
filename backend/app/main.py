@@ -22,6 +22,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi import APIRouter
+
+api_v1_router = APIRouter(prefix="/api")
+api_v1_router.include_router(health.router)
+api_v1_router.include_router(auth.router)
+api_v1_router.include_router(sessions.router)
+api_v1_router.include_router(ask.router)
+api_v1_router.include_router(history.router)
+api_v1_router.include_router(questions.router)
+api_v1_router.include_router(questions.faq_router)
+
+app.include_router(api_v1_router)
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(sessions.router)
