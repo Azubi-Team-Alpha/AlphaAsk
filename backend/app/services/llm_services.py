@@ -56,10 +56,11 @@ def get_llm_response(conversation_history: list[dict], new_question: str) -> str
         messages.append({"role": "user", "content": [{"text": question}]})
 
     model_candidates = [
-        settings.bedrock_model_id,
-        "us.anthropic.claude-3-5-sonnet-20240620-v1:0",
+        "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
         "us.anthropic.claude-3-haiku-20240307-v1:0",
         "amazon.titan-text-express-v1",
+        "amazon.nova-micro-v1:0",
+        settings.bedrock_model_id,
     ]
     # Remove duplicates preserving order
     seen = set()
@@ -78,12 +79,8 @@ def get_llm_response(conversation_history: list[dict], new_question: str) -> str
             )
             return response["output"]["message"]["content"][0]["text"]
         except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "")
-            if error_code in ("ResourceNotFoundException", "ValidationException") and model_id != model_ids[-1]:
-                last_exception = e
-                continue
             last_exception = e
-            break
+            continue
         except Exception as e:
             last_exception = e
             break

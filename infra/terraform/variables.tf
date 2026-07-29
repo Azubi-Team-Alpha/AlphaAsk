@@ -19,7 +19,7 @@ variable "app_name" {
 variable "bedrock_model_id" {
   description = "AWS Bedrock model ID for AI responses"
   type        = string
-  default     = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+  default     = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
 }
 
 variable "jwt_secret_key" {

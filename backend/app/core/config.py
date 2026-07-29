@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60
 
     # AWS / Bedrock
-    bedrock_model_id: str = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+    bedrock_model_id: str = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
 
     # Rate limiting
     rate_limit_per_minute: int = 10
