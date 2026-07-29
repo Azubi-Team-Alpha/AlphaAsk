@@ -36,6 +36,10 @@ jobs:
         run: |
           aws s3 rm s3://alphaask-frontend-static-dev --recursive || echo "S3 bucket already empty or missing"
 
+      - name: Force Delete ECR Repository & Container Images
+        run: |
+          aws ecr delete-repository --repository-name alphaask-backend --force || echo "ECR repository already empty or removed"
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -48,3 +52,4 @@ jobs:
         run: |
           cd infra/terraform
           terraform destroy -auto-approve
+
