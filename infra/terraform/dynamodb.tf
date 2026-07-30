@@ -96,10 +96,10 @@ resource "aws_dynamodb_table" "questions" {
 resource "aws_dynamodb_table" "faq" {
   name         = "${var.app_name}-FAQ"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "id"
+  hash_key     = "faq_id"
 
   attribute {
-    name = "id"
+    name = "faq_id"
     type = "S"
   }
 

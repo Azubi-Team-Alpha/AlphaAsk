@@ -90,6 +90,57 @@ export async function askAlphaAsk(
   return res.json();
 }
 
+export async function askAlphaAskStream(
+  question: string,
+  session_id: string | undefined,
+  document_context: string | undefined,
+  onChunk: (textSoFar: string) => void
+): Promise<string> {
+  const sid = session_id || generateUUID();
+  try {
+    const res = await fetch(`${API_BASE}/api/ask/stream`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ question, session_id: sid, document_context }),
+    });
+
+    if (!res.ok || !res.body) {
+      const syncRes = await askAlphaAsk(question, sid);
+      onChunk(syncRes.answer);
+      return syncRes.answer;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split("\n");
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.content) {
+              fullText += data.content;
+              onChunk(fullText);
+            }
+          } catch {
+            // ignore JSON parse errors on partial chunks
+          }
+        }
+      }
+    }
+    return fullText;
+  } catch (e) {
+    const syncRes = await askAlphaAsk(question, sid);
+    onChunk(syncRes.answer);
+    return syncRes.answer;
+  }
+}
+
 export async function fetchFAQ(): Promise<FAQ[]> {
   const res = await fetch(`${API_BASE}/api/FAQ`, { headers: getHeaders() });
   if (!res.ok) return [];

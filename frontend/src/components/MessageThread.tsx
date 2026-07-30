@@ -4,6 +4,11 @@ import { MessageRow } from "./MessageRow";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 import { Composer } from "./Composer";
 
+interface AttachedFile {
+  name: string;
+  content: string;
+}
+
 interface MessageThreadProps {
   messages: Message[];
   isThinking: boolean;
@@ -13,6 +18,9 @@ interface MessageThreadProps {
   onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   subject: SubjectKey | undefined;
   setSubject: (s: SubjectKey | undefined) => void;
+  attachedFile?: AttachedFile | null;
+  onAttachFile?: (file: File) => void;
+  onRemoveFile?: () => void;
   isAuthenticated: boolean;
 }
 
@@ -20,12 +28,14 @@ export function MessageThread({
   messages,
   isThinking,
   draft,
-
   setDraft,
   onSend,
   onKeyDown,
   subject,
   setSubject,
+  attachedFile,
+  onAttachFile,
+  onRemoveFile,
   isAuthenticated,
 }: MessageThreadProps) {
   return (
@@ -47,6 +57,9 @@ export function MessageThread({
           placeholder="Ask AlphaAsk a question…"
           subject={subject}
           setSubject={setSubject}
+          attachedFile={attachedFile}
+          onAttachFile={onAttachFile}
+          onRemoveFile={onRemoveFile}
           showChips
           chipsAlign="start"
           hint={

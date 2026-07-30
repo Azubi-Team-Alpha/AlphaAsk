@@ -1,4 +1,3 @@
-
 import {
   Plus,
   LogOut,
@@ -32,6 +31,10 @@ interface SidebarProps {
   onSignUpClick: () => void;
   onQuestionManagementClick: () => void;
   onFAQClick: () => void;
+  onSubjectsClick?: () => void;
+  onSavedAnswersClick?: () => void;
+  onClassesClick?: () => void;
+  onMoreClick?: () => void;
 }
 
 export function Sidebar({
@@ -51,6 +54,10 @@ export function Sidebar({
   onSignUpClick,
   onQuestionManagementClick,
   onFAQClick,
+  onSubjectsClick,
+  onSavedAnswersClick,
+  onClassesClick,
+  onMoreClick,
 }: SidebarProps) {
   return (
     <aside className={`aa-sidebar ${sidebarOpen ? "" : "aa-closed"}`}>
@@ -89,13 +96,13 @@ export function Sidebar({
       )}
 
       <div className="aa-nav-list">
-        <button className="aa-nav-item">
+        <button className="aa-nav-item" onClick={onSubjectsClick}>
           <BookOpen size={16} /> Subjects
         </button>
-        <button className="aa-nav-item">
+        <button className="aa-nav-item" onClick={onSavedAnswersClick}>
           <Bookmark size={16} /> Saved answers
         </button>
-        <button className="aa-nav-item">
+        <button className="aa-nav-item" onClick={onClassesClick}>
           <FolderKanban size={16} /> Classes
         </button>
         <button className="aa-nav-item" onClick={onQuestionManagementClick}>
@@ -104,7 +111,7 @@ export function Sidebar({
         <button className="aa-nav-item" onClick={onFAQClick}>
           <HelpCircle size={16} /> FAQ
         </button>
-        <button className="aa-nav-item">
+        <button className="aa-nav-item" onClick={onMoreClick}>
           <MoreHorizontal size={16} /> More
         </button>
       </div>

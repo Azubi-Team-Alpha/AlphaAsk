@@ -2,6 +2,7 @@ import json
 import urllib.request
 import urllib.error
 import boto3
+from typing import Generator
 from botocore.exceptions import ClientError, ReadTimeoutError
 from botocore.config import Config
 from app.core.config import settings
@@ -33,7 +34,18 @@ class LLMError(Exception):
     pass
 
 
-def call_groq_api(conversation_history: list[dict], new_question: str) -> str:
+def prepare_user_question(new_question: str, document_context: str | None = None) -> str:
+    question = new_question.strip() or "Hello"
+    if document_context and document_context.strip():
+        return (
+            f"[ATTACHED DOCUMENT / LECTURE NOTES CONTEXT]:\n"
+            f"```\n{document_context.strip()[:15000]}\n```\n\n"
+            f"[STUDENT QUESTION]: {question}"
+        )
+    return question
+
+
+def call_groq_api(conversation_history: list[dict], new_question: str, document_context: str | None = None) -> str:
     if not settings.groq_api_key:
         raise LLMError("GROQ_API_KEY is not configured.")
 
@@ -46,7 +58,7 @@ def call_groq_api(conversation_history: list[dict], new_question: str) -> str:
         if content:
             messages.append({"role": role, "content": content})
 
-    question = new_question.strip() or "Hello"
+    question = prepare_user_question(new_question, document_context)
     messages.append({"role": "user", "content": question})
 
     payload = {
@@ -78,7 +90,7 @@ def call_groq_api(conversation_history: list[dict], new_question: str) -> str:
         raise LLMError(f"Groq API network error: {str(e)}")
 
 
-def call_gemini_api(conversation_history: list[dict], new_question: str) -> str:
+def call_gemini_api(conversation_history: list[dict], new_question: str, document_context: str | None = None) -> str:
     if not settings.gemini_api_key:
         raise LLMError("GEMINI_API_KEY is not configured.")
 
@@ -97,7 +109,7 @@ def call_gemini_api(conversation_history: list[dict], new_question: str) -> str:
         if content:
             contents.append({"role": role, "parts": [{"text": content}]})
 
-    question = new_question.strip() or "Hello"
+    question = prepare_user_question(new_question, document_context)
     contents.append({"role": "user", "parts": [{"text": question}]})
 
     payload = {
@@ -140,7 +152,7 @@ def call_gemini_api(conversation_history: list[dict], new_question: str) -> str:
     raise LLMError(last_err or "Gemini API failed")
 
 
-def call_bedrock_api(conversation_history: list[dict], new_question: str) -> str:
+def call_bedrock_api(conversation_history: list[dict], new_question: str, document_context: str | None = None) -> str:
     messages = []
     last_role = None
 
@@ -156,7 +168,7 @@ def call_bedrock_api(conversation_history: list[dict], new_question: str) -> str
         messages.append({"role": role, "content": [{"text": content}]})
         last_role = role
 
-    question = new_question.strip() or "Hello"
+    question = prepare_user_question(new_question, document_context)
 
     if last_role == "user" and messages:
         messages[-1]["content"][0]["text"] += f"\n{question}"
@@ -205,32 +217,40 @@ def call_bedrock_api(conversation_history: list[dict], new_question: str) -> str
         raise LLMError(f"AWS Bedrock Exception: {str(last_exception or 'Unknown error')}")
 
 
-def get_llm_response(conversation_history: list[dict], new_question: str) -> str:
+def get_llm_response(conversation_history: list[dict], new_question: str, document_context: str | None = None) -> str:
     errors = []
 
-    # 1. Try Groq Cloud API (Option 3) if key provided
     if settings.groq_api_key:
         try:
-            return call_groq_api(conversation_history, new_question)
+            return call_groq_api(conversation_history, new_question, document_context)
         except Exception as e:
             print(f"Groq API failed: {e}")
             errors.append(str(e))
 
-    # 2. Try Google Gemini API (Option 1) if key provided
     if settings.gemini_api_key:
         try:
-            return call_gemini_api(conversation_history, new_question)
+            return call_gemini_api(conversation_history, new_question, document_context)
         except Exception as e:
             print(f"Gemini API failed: {e}")
             errors.append(str(e))
 
-    # 3. Try AWS Bedrock API
     try:
-        return call_bedrock_api(conversation_history, new_question)
+        return call_bedrock_api(conversation_history, new_question, document_context)
     except Exception as e:
         print(f"Bedrock API failed: {e}")
         errors.append(str(e))
 
-    # Raise error detailing live API failure reasons
     combined_err = " | ".join(errors) if errors else "No AI API providers configured."
     raise LLMError(f"Live AI APIs unavailable: {combined_err}")
+
+
+def stream_llm_response(conversation_history: list[dict], new_question: str, document_context: str | None = None) -> Generator[str, None, None]:
+    """Generates SSE formatted string stream yielding chunks of full response."""
+    full_response = get_llm_response(conversation_history, new_question, document_context)
+    
+    # Stream in word chunks for immediate client responsiveness
+    words = full_response.split(" ")
+    chunk_size = 3
+    for i in range(0, len(words), chunk_size):
+        chunk_text = " ".join(words[i:i + chunk_size]) + (" " if i + chunk_size < len(words) else "")
+        yield f"data: {json.dumps({'content': chunk_text})}\n\n"
