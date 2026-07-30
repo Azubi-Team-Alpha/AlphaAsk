@@ -8,8 +8,8 @@ from app.core.config import settings
 
 def get_bedrock_client():
     bedrock_config = Config(
-        read_timeout=20,
-        connect_timeout=5,
+        read_timeout=45,
+        connect_timeout=10,
         retries={"max_attempts": 2, "mode": "standard"},
     )
     return boto3.client(
@@ -20,10 +20,11 @@ def get_bedrock_client():
 
 SYSTEM_PROMPT = (
     "You are an academic support assistant for university students. "
-    "Answer clearly and accurately. Stay strictly on academic topics "
+    "Answer clearly, accurately, and thoroughly. Stay strictly on academic topics "
     "(coursework, research methods, study skills, referencing, subject explanations). "
     "If asked something off-topic, politely redirect the student back to academic questions. "
-    "Be concise. Use examples where helpful. Cite sources where relevant."
+    "Structure your responses cleanly using clear Markdown (with headings, bullet points, numbered lists, and bold text for key concepts). "
+    "Provide detailed explanations, examples, and step-by-step guidance. Cite sources where relevant."
 )
 
 
@@ -52,7 +53,7 @@ def call_groq_api(conversation_history: list[dict], new_question: str) -> str:
         "model": "llama-3.3-70b-versatile",
         "messages": messages,
         "temperature": 0.3,
-        "max_tokens": 1024
+        "max_tokens": 4096
     }
 
     req = urllib.request.Request(
@@ -67,7 +68,7 @@ def call_groq_api(conversation_history: list[dict], new_question: str) -> str:
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=45) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             return data["choices"][0]["message"]["content"]
     except urllib.error.HTTPError as err:
@@ -83,9 +84,10 @@ def call_gemini_api(conversation_history: list[dict], new_question: str) -> str:
 
     gemini_models = [
         "gemini-2.0-flash",
-        "gemini-1.5-flash-latest",
-        "gemini-1.5-pro-latest",
         "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-pro",
+        "gemini-1.5-pro-latest",
     ]
 
     contents = []
@@ -105,7 +107,7 @@ def call_gemini_api(conversation_history: list[dict], new_question: str) -> str:
         "contents": contents,
         "generationConfig": {
             "temperature": 0.3,
-            "maxOutputTokens": 1024
+            "maxOutputTokens": 4096
         }
     }
 
@@ -122,7 +124,7 @@ def call_gemini_api(conversation_history: list[dict], new_question: str) -> str:
             method="POST"
         )
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=45) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return data["candidates"][0]["content"]["parts"][0]["text"]
         except urllib.error.HTTPError as err:
@@ -179,7 +181,7 @@ def call_bedrock_api(conversation_history: list[dict], new_question: str) -> str
             kwargs = {
                 "modelId": model_id,
                 "messages": messages,
-                "inferenceConfig": {"maxTokens": 1024, "temperature": 0.3},
+                "inferenceConfig": {"maxTokens": 4096, "temperature": 0.3},
             }
             if "anthropic" in model_id.lower():
                 kwargs["system"] = [{"text": SYSTEM_PROMPT}]
