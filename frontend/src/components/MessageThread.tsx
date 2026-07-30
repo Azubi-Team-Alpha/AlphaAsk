@@ -41,9 +41,10 @@ export function MessageThread({
   return (
     <>
       <div className="aa-thread-inner">
-        {messages.map((m) => (
-          <MessageRow key={m.id} message={m} />
-        ))}
+        {messages.map((m, idx) => {
+          const prevQuestion = idx > 0 && messages[idx - 1].role === "user" ? messages[idx - 1].content : undefined;
+          return <MessageRow key={m.id} message={m} previousUserQuestion={prevQuestion} />;
+        })}
         {isThinking && <ThinkingIndicator />}
       </div>
 

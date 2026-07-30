@@ -1,4 +1,4 @@
-import type { AuthPayload, CurrentUser, Conversation, FAQ, Question } from "../types";
+import type { AuthPayload, CurrentUser, Conversation, FAQ, Question, Message } from "../types";
 import { generateUUID } from "./utils";
 
 const rawBase = import.meta.env.VITE_API_BASE_URL || "";
@@ -23,12 +23,6 @@ function getHeaders(): Record<string, string> {
   return headers;
 }
 
-export async function fetchConversations(): Promise<Conversation[]> {
-  const res = await fetch(`${API_BASE}/api/conversations`, { headers: getHeaders() });
-  if (!res.ok) return [];
-  return res.json();
-}
-
 export async function createSession(): Promise<string> {
   const res = await fetch(`${API_BASE}/api/sessions`, {
     method: "POST",
@@ -41,42 +35,53 @@ export async function createSession(): Promise<string> {
   return data.session_id || generateUUID();
 }
 
-export async function authenticate(payload: AuthPayload): Promise<CurrentUser> {
-  const endpoint = payload.mode === "login" ? `${API_BASE}/api/auth/login` : `${API_BASE}/api/auth/register`;
-  const res = await fetch(endpoint, {
+export async function login(payload: AuthPayload): Promise<CurrentUser> {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: payload.email,
-      password: payload.password,
-      name: payload.name || "Student",
-    }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const errorData = await res.json().catch(() => ({ detail: "Authentication failed" }));
-    throw new Error(errorData.detail || "Authentication failed");
+    const errorData = await res.json().catch(() => ({ detail: "Login failed" }));
+    throw new Error(errorData.detail || "Invalid credentials");
   }
   const data = await res.json();
-  const token = data.access_token || "";
-  if (token) {
-    setToken(token);
-  }
-  const name = data.name || payload.name || "Student";
-  const email = data.email || payload.email;
-  const initials = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "ST";
-
+  setToken(data.access_token);
+  const name = payload.email.split("@")[0] || "User";
+  const initials = name.slice(0, 2).toUpperCase();
   return {
-    email,
     name,
+    email: payload.email,
     initials,
-    token,
+    token: data.access_token,
   };
 }
 
-export async function askAlphaAsk(
-  question: string,
-  session_id?: string
-) {
+export const authenticate = login;
+
+export async function register(payload: AuthPayload): Promise<CurrentUser> {
+  const res = await fetch(`${API_BASE}/api/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ detail: "Registration failed" }));
+    throw new Error(errorData.detail || "Registration failed");
+  }
+  const data = await res.json();
+  setToken(data.access_token);
+  const name = payload.email.split("@")[0] || "User";
+  const initials = name.slice(0, 2).toUpperCase();
+  return {
+    name,
+    email: payload.email,
+    initials,
+    token: data.access_token,
+  };
+}
+
+export async function askAlphaAsk(question: string, session_id?: string): Promise<{ answer: string; session_id: string }> {
   const sid = session_id || generateUUID();
   const res = await fetch(`${API_BASE}/api/ask`, {
     method: "POST",
@@ -134,7 +139,7 @@ export async function askAlphaAskStream(
       }
     }
     return fullText;
-  } catch (e) {
+  } catch {
     const syncRes = await askAlphaAsk(question, sid);
     onChunk(syncRes.answer);
     return syncRes.answer;
@@ -160,5 +165,37 @@ export async function deleteQuestion(id: string): Promise<void> {
   });
   if (!res.ok) {
     throw new Error("Failed to delete question");
+  }
+}
+
+export async function fetchConversations(): Promise<Conversation[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/conversations`, { headers: getHeaders() });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.map((c: any) => ({
+      id: c.id,
+      title: c.title || "Academic Question",
+      updatedAt: c.updatedAt || Date.now(),
+      messages: [],
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchHistory(sessionId: string): Promise<Message[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/history/${sessionId}`, { headers: getHeaders() });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.messages || []).map((m: any) => ({
+      id: generateUUID(),
+      role: m.role,
+      content: m.content,
+      timestamp: new Date(m.created_at || Date.now()).getTime(),
+    }));
+  } catch {
+    return [];
   }
 }

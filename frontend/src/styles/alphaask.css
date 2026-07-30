@@ -253,6 +253,37 @@
   word-break: break-word;
 }
 
+.aa-message-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.aa-action-btn {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--aa-border);
+  background: var(--aa-surface);
+  color: var(--aa-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+.aa-action-btn:hover {
+  background: var(--aa-surface-raised);
+  color: var(--aa-text);
+  border-color: var(--aa-text-muted);
+}
+.aa-action-btn.aa-saved {
+  border-color: var(--aa-accent);
+  color: var(--aa-accent);
+  background: rgba(242, 183, 5, 0.1);
+}
+
 .aa-assistant-text p {
   margin-bottom: 12px;
 }
