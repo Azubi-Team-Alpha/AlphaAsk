@@ -98,7 +98,7 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
 
       setMessages((prev) => [...prev, initialAssistantMessage]);
 
-      const finalAnswer = await askAlphaAskStream(
+      await askAlphaAskStream(
         question,
         sid,
         docContext,
