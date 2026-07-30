@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ThemeMode } from "../types";
+import type { ThemeMode, SubjectKey } from "../types";
 import { useAuth } from "../hooks/useAuth";
 import { useConversations } from "../hooks/useConversations";
 import { useChat } from "../hooks/useChat";
@@ -10,6 +10,11 @@ import { MessageThread } from "./MessageThread";
 import { AuthModal } from "./AuthModal";
 import { QuestionManagement } from "./QuestionManagement";
 import { FAQ } from "./FAQ";
+import { SubjectsModal } from "./SubjectsModal";
+import { SavedAnswersModal } from "./SavedAnswersModal";
+import { ClassesModal } from "./ClassesModal";
+import type { StudentClass } from "./ClassesModal";
+import { MoreModal } from "./MoreModal";
 import "../styles/alphaask.css";
 
 export default function AlphaAskApp() {
@@ -18,12 +23,16 @@ export default function AlphaAskApp() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Modal states
   const [showQuestionManagement, setShowQuestionManagement] = useState(false);
   const [showFAQ, setShowFAQ] = useState(false);
+  const [showSubjects, setShowSubjects] = useState(false);
+  const [showSavedAnswers, setShowSavedAnswers] = useState(false);
+  const [showClasses, setShowClasses] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+  const [activeClass, setActiveClass] = useState<StudentClass | null>(null);
 
-  // `auth`'s onLogOut callback closes over `chat`, which is declared further
-  // below — safe because the callback only runs on a later user action
-  // (after the whole component has finished rendering once).
   const auth = useAuth({
     onLogOut: () => {
       chat.resetThread();
@@ -44,6 +53,14 @@ export default function AlphaAskApp() {
 
   const showHero = chat.messages.length === 0;
 
+  const handleSelectSubject = (subjectKey: SubjectKey, samplePrompt?: string) => {
+    chat.setSubject(subjectKey);
+    if (samplePrompt) {
+      chat.setDraft(samplePrompt);
+      chat.textareaRef.current?.focus();
+    }
+  };
+
   return (
     <div className={`aa-root aa-theme-${theme}`}>
       <Sidebar
@@ -63,6 +80,10 @@ export default function AlphaAskApp() {
         onSignUpClick={() => auth.setAuthModalMode("signup")}
         onQuestionManagementClick={() => setShowQuestionManagement(true)}
         onFAQClick={() => setShowFAQ(true)}
+        onSubjectsClick={() => setShowSubjects(true)}
+        onSavedAnswersClick={() => setShowSavedAnswers(true)}
+        onClassesClick={() => setShowClasses(true)}
+        onMoreClick={() => setShowMore(true)}
       />
 
       <div className="aa-main">
@@ -123,6 +144,29 @@ export default function AlphaAskApp() {
 
       {showFAQ && (
         <FAQ onClose={() => setShowFAQ(false)} />
+      )}
+
+      {showSubjects && (
+        <SubjectsModal
+          onClose={() => setShowSubjects(false)}
+          onSelectSubject={handleSelectSubject}
+        />
+      )}
+
+      {showSavedAnswers && (
+        <SavedAnswersModal onClose={() => setShowSavedAnswers(false)} />
+      )}
+
+      {showClasses && (
+        <ClassesModal
+          onClose={() => setShowClasses(false)}
+          activeClassId={activeClass?.id}
+          onSelectClass={setActiveClass}
+        />
+      )}
+
+      {showMore && (
+        <MoreModal onClose={() => setShowMore(false)} />
       )}
     </div>
   );
