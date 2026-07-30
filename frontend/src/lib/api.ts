@@ -12,6 +12,7 @@ export function setToken(token: string | null) {
     localStorage.setItem("alphaask_token", token);
   } else {
     localStorage.removeItem("alphaask_token");
+    localStorage.removeItem("alphaask_user");
   }
 }
 
