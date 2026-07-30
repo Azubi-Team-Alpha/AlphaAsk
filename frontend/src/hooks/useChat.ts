@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { askAlphaAskStream, createSession } from "../lib/api";
+import { askAlphaAskStream, createSession, fetchHistory } from "../lib/api";
 import { generateUUID } from "../lib/utils";
 import type { Conversation, Message, SubjectKey } from "../types";
 
@@ -34,10 +34,19 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
     textareaRef.current?.focus();
   }, []);
 
-  const openConversation = useCallback((id: string) => {
+  const openConversation = useCallback(async (id: string) => {
     setActiveId(id);
     setSessionId(id);
     setMessages([]);
+    setIsThinking(true);
+    try {
+      const historyMsgs = await fetchHistory(id);
+      setMessages(historyMsgs);
+    } catch {
+      // keep empty if network fail
+    } finally {
+      setIsThinking(false);
+    }
   }, []);
 
   const handleStarterClick = useCallback((prompt: string) => {
