@@ -99,12 +99,23 @@ export function FlashcardModal({ onClose, title = "Academic Concept Study Cards"
 
   return (
     <div className="aa-modal-overlay" onMouseDown={onClose}>
-      <div className="aa-modal-card" style={{ maxWidth: 640, width: "94%" }} onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        className="aa-modal-card"
+        style={{
+          maxWidth: 640,
+          width: "94%",
+          maxHeight: "85vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <button className="aa-modal-close" onClick={onClose} aria-label="Close">
           <X size={16} />
         </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4, flexShrink: 0 }}>
           <div className="aa-mark" style={{ background: "var(--aa-accent)", color: "var(--aa-accent-ink)" }}>
             <Layers size={16} />
           </div>
@@ -112,12 +123,12 @@ export function FlashcardModal({ onClose, title = "Academic Concept Study Cards"
             <h2 className="aa-modal-title" style={{ margin: 0 }}>Smart Flashcard Studio & Quiz</h2>
           </div>
         </div>
-        <p className="aa-modal-sub" style={{ marginBottom: 16 }}>
+        <p className="aa-modal-sub" style={{ marginBottom: 14, flexShrink: 0 }}>
           {title}
         </p>
 
         {/* Tab switcher */}
-        <div style={{ display: "flex", gap: 10, marginBottom: 18, borderBottom: "1px solid var(--aa-border)", paddingBottom: 10 }}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 16, borderBottom: "1px solid var(--aa-border)", paddingBottom: 10, flexShrink: 0 }}>
           <button
             className={`aa-btn ${activeTab === "flashcards" ? "aa-btn-primary" : ""}`}
             onClick={() => setActiveTab("flashcards")}
@@ -134,127 +145,130 @@ export function FlashcardModal({ onClose, title = "Academic Concept Study Cards"
           </button>
         </div>
 
-        {activeTab === "flashcards" ? (
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, fontSize: 12.5, color: "var(--aa-text-muted)" }}>
-              <span>Card {currentIndex + 1} of {cards.length}</span>
-              <span>Click card to flip</span>
-            </div>
+        {/* Scrollable Content Body */}
+        <div style={{ flex: 1, overflowY: "auto", paddingRight: 6, display: "flex", flexDirection: "column" }}>
+          {activeTab === "flashcards" ? (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, fontSize: 12.5, color: "var(--aa-text-muted)" }}>
+                <span>Card {currentIndex + 1} of {cards.length}</span>
+                <span>Click card to flip</span>
+              </div>
 
-            {/* Flip card */}
-            <div
-              onClick={() => setIsFlipped(!isFlipped)}
-              style={{
-                minHeight: 180,
-                background: isFlipped ? "var(--aa-surface)" : "var(--aa-surface-hover)",
-                border: isFlipped ? "1.5px solid var(--aa-accent)" : "1px dashed var(--aa-border)",
-                borderRadius: 12,
-                padding: 24,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                textAlign: "center",
-                cursor: "pointer",
-                transition: "all 0.25s ease",
-                userSelect: "none",
-                marginBottom: 16,
-              }}
-            >
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "var(--aa-accent)", marginBottom: 10 }}>
-                {isFlipped ? "Answer / Explanation" : "Question / Concept"}
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.5, color: "var(--aa-text)" }}>
-                {isFlipped ? currentCard.back : currentCard.front}
-              </div>
-              <div style={{ marginTop: 14, fontSize: 12, color: "var(--aa-text-muted)", display: "flex", alignItems: "center", gap: 5 }}>
-                <RotateCw size={12} /> {isFlipped ? "Click to see question" : "Click to reveal answer"}
-              </div>
-            </div>
-
-            {/* Navigation buttons */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <button
-                className="aa-btn"
-                disabled={currentIndex === 0}
-                onClick={() => { setCurrentIndex(i => Math.max(0, i - 1)); setIsFlipped(false); }}
+              {/* Flip card */}
+              <div
+                onClick={() => setIsFlipped(!isFlipped)}
+                style={{
+                  minHeight: 180,
+                  background: isFlipped ? "var(--aa-surface)" : "var(--aa-surface-hover)",
+                  border: isFlipped ? "1.5px solid var(--aa-accent)" : "1px dashed var(--aa-border)",
+                  borderRadius: 12,
+                  padding: 24,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                  cursor: "pointer",
+                  transition: "all 0.25s ease",
+                  userSelect: "none",
+                  marginBottom: 16,
+                }}
               >
-                <ChevronLeft size={14} /> Previous
-              </button>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "var(--aa-accent)", marginBottom: 10 }}>
+                  {isFlipped ? "Answer / Explanation" : "Question / Concept"}
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.5, color: "var(--aa-text)" }}>
+                  {isFlipped ? currentCard.back : currentCard.front}
+                </div>
+                <div style={{ marginTop: 14, fontSize: 12, color: "var(--aa-text-muted)", display: "flex", alignItems: "center", gap: 5 }}>
+                  <RotateCw size={12} /> {isFlipped ? "Click to see question" : "Click to reveal answer"}
+                </div>
+              </div>
 
-              <button
-                className="aa-btn aa-btn-primary"
-                disabled={currentIndex === cards.length - 1}
-                onClick={() => { setCurrentIndex(i => Math.min(cards.length - 1, i + 1)); setIsFlipped(false); }}
-              >
-                Next <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            {!quizSubmitted ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {cards.map((card, qIdx) => (
-                  <div key={card.id} style={{ background: "var(--aa-surface)", padding: 14, borderRadius: 10, border: "1px solid var(--aa-border)" }}>
-                    <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 10, color: "var(--aa-text)" }}>
-                      Q{qIdx + 1}: {card.front}
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {card.options?.map((opt, oIdx) => (
-                        <label
-                          key={oIdx}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                            padding: "8px 12px",
-                            borderRadius: 6,
-                            background: selectedAnswers[qIdx] === oIdx ? "var(--aa-accent-bg)" : "transparent",
-                            border: selectedAnswers[qIdx] === oIdx ? "1px solid var(--aa-accent)" : "1px solid transparent",
-                            cursor: "pointer",
-                            fontSize: 13,
-                          }}
-                        >
-                          <input
-                            type="radio"
-                            name={`quiz-q-${qIdx}`}
-                            checked={selectedAnswers[qIdx] === oIdx}
-                            onChange={() => setSelectedAnswers(prev => ({ ...prev, [qIdx]: oIdx }))}
-                          />
-                          <span>{opt}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+              {/* Navigation buttons */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 10 }}>
+                <button
+                  className="aa-btn"
+                  disabled={currentIndex === 0}
+                  onClick={() => { setCurrentIndex(i => Math.max(0, i - 1)); setIsFlipped(false); }}
+                >
+                  <ChevronLeft size={14} /> Previous
+                </button>
 
                 <button
                   className="aa-btn aa-btn-primary"
-                  style={{ marginTop: 8, justifyContent: "center" }}
-                  onClick={() => setQuizSubmitted(true)}
+                  disabled={currentIndex === cards.length - 1}
+                  onClick={() => { setCurrentIndex(i => Math.min(cards.length - 1, i + 1)); setIsFlipped(false); }}
                 >
-                  <CheckCircle2 size={15} /> Submit Quiz Answers
+                  Next <ChevronRight size={14} />
                 </button>
               </div>
-            ) : (
-              <div style={{ textAlign: "center", padding: 24, background: "var(--aa-surface)", borderRadius: 12, border: "1px solid var(--aa-border)" }}>
-                <Award size={40} style={{ color: "var(--aa-accent)", marginBottom: 10 }} />
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Quiz Completed!</h3>
-                <p style={{ fontSize: 14, color: "var(--aa-text-muted)", margin: "8px 0 16px" }}>
-                  Your Score: <strong style={{ color: "var(--aa-accent)", fontSize: 18 }}>{calculateScore()} / {cards.length}</strong> ({Math.round((calculateScore() / cards.length) * 100)}%)
-                </p>
+            </div>
+          ) : (
+            <div style={{ paddingBottom: 16 }}>
+              {!quizSubmitted ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {cards.map((card, qIdx) => (
+                    <div key={card.id} style={{ background: "var(--aa-surface)", padding: 14, borderRadius: 10, border: "1px solid var(--aa-border)" }}>
+                      <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 10, color: "var(--aa-text)" }}>
+                        Q{qIdx + 1}: {card.front}
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {card.options?.map((opt, oIdx) => (
+                          <label
+                            key={oIdx}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              padding: "8px 12px",
+                              borderRadius: 6,
+                              background: selectedAnswers[qIdx] === oIdx ? "var(--aa-accent-bg)" : "transparent",
+                              border: selectedAnswers[qIdx] === oIdx ? "1px solid var(--aa-accent)" : "1px solid transparent",
+                              cursor: "pointer",
+                              fontSize: 13,
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name={`quiz-q-${qIdx}`}
+                              checked={selectedAnswers[qIdx] === oIdx}
+                              onChange={() => setSelectedAnswers(prev => ({ ...prev, [qIdx]: oIdx }))}
+                            />
+                            <span>{opt}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
 
-                <button
-                  className="aa-btn aa-btn-primary"
-                  onClick={() => { setQuizSubmitted(false); setSelectedAnswers({}); }}
-                >
-                  Retry Quiz
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+                  <button
+                    className="aa-btn aa-btn-primary"
+                    style={{ marginTop: 8, marginBottom: 12, justifyContent: "center" }}
+                    onClick={() => setQuizSubmitted(true)}
+                  >
+                    <CheckCircle2 size={15} /> Submit Quiz Answers
+                  </button>
+                </div>
+              ) : (
+                <div style={{ textAlign: "center", padding: 24, background: "var(--aa-surface)", borderRadius: 12, border: "1px solid var(--aa-border)" }}>
+                  <Award size={40} style={{ color: "var(--aa-accent)", marginBottom: 10 }} />
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Quiz Completed!</h3>
+                  <p style={{ fontSize: 14, color: "var(--aa-text-muted)", margin: "8px 0 16px" }}>
+                    Your Score: <strong style={{ color: "var(--aa-accent)", fontSize: 18 }}>{calculateScore()} / {cards.length}</strong> ({Math.round((calculateScore() / cards.length) * 100)}%)
+                  </p>
+
+                  <button
+                    className="aa-btn aa-btn-primary"
+                    onClick={() => { setQuizSubmitted(false); setSelectedAnswers({}); }}
+                  >
+                    Retry Quiz
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
