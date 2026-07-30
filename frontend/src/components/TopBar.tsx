@@ -1,5 +1,6 @@
 import { LogIn, Moon, PanelLeft, Sun, UserPlus } from "lucide-react";
 import type { ThemeMode } from "../types";
+import { PomodoroTimer } from "./PomodoroTimer";
 
 interface TopBarProps {
   sidebarOpen: boolean;
@@ -31,6 +32,8 @@ export function TopBar({
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <PomodoroTimer />
+
         <button className="aa-theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
           {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
         </button>
