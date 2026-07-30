@@ -12,6 +12,7 @@ export function setToken(token: string | null) {
     localStorage.setItem("alphaask_token", token);
   } else {
     localStorage.removeItem("alphaask_token");
+    localStorage.removeItem("alphaask_user");
   }
 }
 
@@ -39,15 +40,18 @@ export async function login(payload: AuthPayload): Promise<CurrentUser> {
   const res = await fetch(`${API_BASE}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      email: payload.email.trim(),
+      password: payload.password,
+    }),
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ detail: "Login failed" }));
-    throw new Error(errorData.detail || "Invalid credentials");
+    throw new Error(errorData.detail || "Incorrect email or password");
   }
   const data = await res.json();
   setToken(data.access_token);
-  const name = payload.email.split("@")[0] || "User";
+  const name = data.name || payload.email.split("@")[0] || "User";
   const initials = name.slice(0, 2).toUpperCase();
   return {
     name,
@@ -63,7 +67,11 @@ export async function register(payload: AuthPayload): Promise<CurrentUser> {
   const res = await fetch(`${API_BASE}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      name: payload.name?.trim() || "Student",
+      email: payload.email.trim(),
+      password: payload.password,
+    }),
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ detail: "Registration failed" }));
@@ -71,7 +79,7 @@ export async function register(payload: AuthPayload): Promise<CurrentUser> {
   }
   const data = await res.json();
   setToken(data.access_token);
-  const name = payload.email.split("@")[0] || "User";
+  const name = data.name || payload.name || payload.email.split("@")[0] || "User";
   const initials = name.slice(0, 2).toUpperCase();
   return {
     name,
