@@ -174,11 +174,12 @@ jobs:
             terraform import -lock=false aws_s3_bucket_public_access_block.frontend_public $BUCKET_NAME
             terraform import -lock=false aws_s3_bucket_website_configuration.frontend_website $BUCKET_NAME
             terraform import -lock=false aws_s3_bucket_policy.frontend_policy $BUCKET_NAME
-          elif aws s3api head-bucket --bucket alphaask-frontend-static-dev >/dev/null 2>&1; then
-            terraform import -lock=false aws_s3_bucket.frontend alphaask-frontend-static-dev
-            terraform import -lock=false aws_s3_bucket_public_access_block.frontend_public alphaask-frontend-static-dev
-            terraform import -lock=false aws_s3_bucket_website_configuration.frontend_website alphaask-frontend-static-dev
-            terraform import -lock=false aws_s3_bucket_policy.frontend_policy alphaask-frontend-static-dev
+          fi
+
+          # Empty old legacy bucket if it exists to allow clean destruction/migration
+          if aws s3api head-bucket --bucket alphaask-frontend-static-dev >/dev/null 2>&1; then
+            echo "Emptying legacy S3 bucket alphaask-frontend-static-dev..."
+            aws s3 rm s3://alphaask-frontend-static-dev --recursive || true
           fi
 
           # ElastiCache Redis & Security Group
