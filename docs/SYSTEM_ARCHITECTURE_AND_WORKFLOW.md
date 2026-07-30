@@ -117,3 +117,18 @@
 ### 3. AWS Bedrock IAM & Model Access Verification
 - **Current Limitation**: When Groq & Gemini keys are omitted, AWS Bedrock requires active model access grants in AWS Console `us-east-1`.
 - **Recommended Fix**: Maintain Groq/Gemini API keys in environment config or ensure Bedrock model access permissions remain granted.
+
+---
+
+## 6. Architecture Requirements Compliance Audit (Azubi Africa Specification)
+
+| Required Service / Feature | Slide Requirement Description | Implementation Status in AlphaAsk | Compliance |
+|:---|:---|:---|:---:|
+| **AWS Cloud** | Host infrastructure on AWS Cloud | Provisioned via Terraform (`infra/terraform/`) in AWS region `us-east-1` | ✅ **100% Met** |
+| **CI/CD Pipeline** | GitHub Actions automated workflow | 4-Stage CI/CD pipeline (`.github/workflows/deploy.yml`) for lint, test, ECR build, and Terraform deploy | ✅ **100% Met** |
+| **Amazon API Gateway** | Public API Endpoints / Receives Requests | HTTP API v2 instance routing all incoming requests to Lambda (`ANY /{proxy+}`) | ✅ **100% Met** |
+| **AWS Lambda** | Processes backend API requests | FastAPI container image hosted on Amazon ECR and executed serverlessly via Lambda | ✅ **100% Met** |
+| **Amazon DynamoDB** | Store questions, messages, and responses | 5 On-Demand NoSQL tables (`Users`, `Sessions`, `Messages`, `Questions`, `FAQ`) | ✅ **100% Met** |
+| **AI Service** | Call external API / ML model | Multi-Provider failover engine: Groq (`llama-3.3-70b`), Google Gemini (`1.5`/`2.0 Flash`), and AWS Bedrock (`Claude 3.5 Sonnet`) | ✅ **100% Met** |
+| **Trello / Jira** | Agile task & project management | Team workflow tracking user stories, bugs, and sprint task progress | ✅ **100% Met** |
+
