@@ -163,4 +163,37 @@ Sending questions to Bedrock produced a runtime validation error:
 
 ---
 
+## 9. AI Output Formatting & Unstructured Text Rendering Collapse
+
+### Problem Statement
+AI assistant responses were displayed in the web UI as continuous, unformatted walls of text without paragraph breaks, headings, or bullet lists, rendering academic answers difficult to read.
+
+### Root Cause
+1. Frontend [MessageRow.tsx](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/frontend/src/components/MessageRow.tsx) rendered message strings inside standard `<div className="aa-assistant-text">{message.content}</div>` without Markdown parsing. HTML collapses newlines into single spaces by default.
+2. Backend `SYSTEM_PROMPT` lacked structural directives for Markdown formatting.
+
+### Solution & Resolution
+1. Installed `react-markdown` in the frontend and updated `MessageRow.tsx` to parse response text into React DOM nodes.
+2. Enhanced [alphaask.css](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/frontend/src/styles/alphaask.css) with CSS rules for headings (`h1`-`h4`), lists (`ul`/`ol`/`li`), code blocks (`pre`/`code`), blockquotes, and `white-space: pre-wrap; word-break: break-word;`.
+3. Updated `SYSTEM_PROMPT` in [backend/app/services/llm_services.py](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/backend/app/services/llm_services.py) to instruct models to use clean Markdown structures (headings, bullet points, numbered lists, bold text).
+
+---
+
+## 10. Short AI Responses & Output Token Truncation
+
+### Problem Statement
+Students received short, minimal responses when asking for complex help (e.g. essay outlines, detailed subject explanations), despite using high-capacity models like Gemini 1.5 Flash.
+
+### Root Cause
+1. `SYSTEM_PROMPT` explicitly contained `"Be concise."`, directing the model to summarize output aggressively.
+2. `max_tokens` / `maxOutputTokens` was capped at `1024` tokens across Groq, Gemini, and Bedrock calls.
+3. Network HTTP timeouts were set to `15s`, which could abort long generation requests.
+
+### Solution & Resolution
+1. Removed `"Be concise."` from `SYSTEM_PROMPT` and instructed models to provide detailed explanations, step-by-step guidance, and examples.
+2. Increased `max_tokens` / `maxOutputTokens` from **`1024` to `4096`** across all LLM provider functions in `llm_services.py`.
+3. Increased network timeouts to `45s` and updated the Gemini model candidate chain (`gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-pro`).
+
+---
+
 > *Note: This document is continuously updated whenever new technical challenges or infrastructure edge-cases are addressed.*

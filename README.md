@@ -134,6 +134,9 @@ terraform apply -auto-approve
 
 ## 7. Documentation Index
 
-- **Serverless Architecture & Docker Feasibility Report**: [infra/DOCKER_SERVERLESS_REPORT.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/infra/DOCKER_SERVERLESS_REPORT.md)
+- **System Architecture & Technical Specification**: [docs/SYSTEM_ARCHITECTURE_AND_WORKFLOW.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/SYSTEM_ARCHITECTURE_AND_WORKFLOW.md)
+- **Technical Challenges & Solutions Log**: [docs/CHALLENGES_AND_SOLUTIONS.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/CHALLENGES_AND_SOLUTIONS.md)
+- **Serverless Architecture & Docker Feasibility Report**: [docs/DOCKER_SERVERLESS_REPORT.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/DOCKER_SERVERLESS_REPORT.md)
 - **Local Testing & Deployment Guide**: [docs/LOCAL_TESTING_AND_TERRAFORM_GUIDE.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/LOCAL_TESTING_AND_TERRAFORM_GUIDE.md)
 - **Project Requirements Document**: [docs/L2_Project 3 (1).pdf](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/L2_Project%203%20%281%29.pdf)
+
