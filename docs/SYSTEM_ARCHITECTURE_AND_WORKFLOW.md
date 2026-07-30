@@ -62,7 +62,7 @@
 ### D. Multi-Provider LLM Orchestration Engine
 - **Failover Chain**:
   1. **Groq Cloud API** (`llama-3.3-70b-versatile`) — Ultra-low latency primary provider.
-  2. **Google Gemini API** (`gemini-2.0-flash` / `gemini-1.5-flash`) — Secondary high-capacity fallback.
+  2. **Google Gemini API** (`gemini-3.6-flash` / `gemini-3.5-flash` / `gemini-2.0-flash` / `gemini-1.5-flash`) — Secondary high-capacity fallback.
   3. **AWS Bedrock** (`us.anthropic.claude-3-5-sonnet-20241022-v2:0` / `amazon.nova-micro-v1:0` / `amazon.titan-text-express-v1`) — Cloud infrastructure fallback.
 - **Token Output Limit**: 4,096 tokens per request.
 - **HTTP Request Timeout**: 45 seconds.

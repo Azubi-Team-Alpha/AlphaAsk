@@ -1,4 +1,5 @@
 import json
+import re
 import urllib.request
 import urllib.error
 import boto3
@@ -34,12 +35,43 @@ class LLMError(Exception):
     pass
 
 
+def clean_pdf_text_context(text: str) -> str:
+    if not text:
+        return ""
+
+    # If raw PDF structure binary noise is detected
+    if "%PDF" in text or "/FirstChar" in text or "/Widths" in text or "/Font" in text or "obj" in text:
+        # Extract text literals enclosed in (text)
+        extracted_strings = re.findall(r'\(([^()]{2,})\)', text)
+        if extracted_strings:
+            clean_lines = [s.strip() for s in extracted_strings if not re.match(r'^[0-9\s/\\-]+$', s.strip()) and len(s.strip()) > 1]
+            if len(clean_lines) > 3:
+                return "\n".join(clean_lines)
+
+        # Fallback: Filter out PDF metric arrays and dictionary keys
+        lines = text.splitlines()
+        filtered = []
+        for line in lines:
+            if re.search(r'/(FirstChar|LastChar|Widths|FontDescriptor|Encoding|Type|Subtype)', line, re.I):
+                continue
+            if re.match(r'^\s*(\d+\s+){4,}\d+\s*$', line):
+                continue
+            if re.match(r'^\s*\d+\s+\d+\s+obj\b', line, re.I) or line.strip().lower() in ("endobj", "stream", "endstream", "xref", "trailer"):
+                continue
+            if line.strip():
+                filtered.append(line)
+        return "\n".join(filtered)
+
+    return text
+
+
 def prepare_user_question(new_question: str, document_context: str | None = None) -> str:
     question = new_question.strip() or "Hello"
     if document_context and document_context.strip():
+        cleaned_doc = clean_pdf_text_context(document_context)
         return (
-            f"[ATTACHED DOCUMENT / LECTURE NOTES CONTEXT]:\n"
-            f"```\n{document_context.strip()[:15000]}\n```\n\n"
+            f"[ATTACHED STUDY DOCUMENT / LECTURE NOTES CONTEXT]:\n"
+            f"```\n{cleaned_doc[:15000]}\n```\n\n"
             f"[STUDENT QUESTION]: {question}"
         )
     return question
@@ -95,10 +127,14 @@ def call_gemini_api(conversation_history: list[dict], new_question: str, documen
         raise LLMError("GEMINI_API_KEY is not configured.")
 
     gemini_models = [
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
         "gemini-2.0-flash",
         "gemini-1.5-flash",
-        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash-8b",
+        "gemini-2.0-flash-exp",
         "gemini-1.5-pro",
+        "gemini-1.5-flash-latest",
         "gemini-1.5-pro-latest",
     ]
 
@@ -142,7 +178,7 @@ def call_gemini_api(conversation_history: list[dict], new_question: str, documen
         except urllib.error.HTTPError as err:
             err_body = err.read().decode("utf-8", errors="ignore")
             last_err = f"Gemini ({model}) Error ({err.code}): {err_body[:200]}"
-            if err.code == 404:
+            if err.code in (404, 400):
                 continue
             break
         except Exception as e:
@@ -247,8 +283,7 @@ def get_llm_response(conversation_history: list[dict], new_question: str, docume
 def stream_llm_response(conversation_history: list[dict], new_question: str, document_context: str | None = None) -> Generator[str, None, None]:
     """Generates SSE formatted string stream yielding chunks of full response."""
     full_response = get_llm_response(conversation_history, new_question, document_context)
-    
-    # Stream in word chunks for immediate client responsiveness
+
     words = full_response.split(" ")
     chunk_size = 3
     for i in range(0, len(words), chunk_size):
