@@ -1,3 +1,5 @@
+import base64
+import io
 import json
 import re
 import urllib.request
@@ -6,6 +8,7 @@ import boto3
 from typing import Generator
 from botocore.exceptions import ClientError, ReadTimeoutError
 from botocore.config import Config
+from pypdf import PdfReader
 from app.core.config import settings
 
 def get_bedrock_client():
@@ -35,13 +38,47 @@ class LLMError(Exception):
     pass
 
 
+def extract_pdf_with_pypdf(pdf_bytes: bytes) -> str:
+    try:
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        page_texts = []
+        for idx, page in enumerate(reader.pages):
+            t = page.extract_text()
+            if t and t.strip():
+                page_texts.append(f"--- Page {idx + 1} ---\n{t.strip()}")
+        if page_texts:
+            return "\n\n".join(page_texts)
+    except Exception as e:
+        print(f"pypdf extraction error: {e}")
+    return ""
+
+
 def clean_pdf_text_context(text: str) -> str:
     if not text:
         return ""
 
-    # If raw PDF structure binary noise is detected
-    if "%PDF" in text or "/FirstChar" in text or "/Widths" in text or "/Font" in text or "obj" in text:
-        # Extract text literals enclosed in (text)
+    # Check for base64 data URL or raw base64 string
+    if text.startswith("data:") and ";base64," in text:
+        try:
+            _, base64_str = text.split(";base64,", 1)
+            pdf_bytes = base64.b64decode(base64_str)
+            extracted = extract_pdf_with_pypdf(pdf_bytes)
+            if extracted:
+                return extracted
+        except Exception as e:
+            print(f"Base64 PDF decode error: {e}")
+
+    # Check if raw PDF stream bytes or %PDF header passed
+    if "%PDF" in text or "obj" in text or "\ufffd" in text or "/FirstChar" in text:
+        try:
+            pdf_bytes = text.encode("latin1", errors="ignore")
+            extracted = extract_pdf_with_pypdf(pdf_bytes)
+            if extracted:
+                return extracted
+        except Exception as e:
+            print(f"Latin1 PDF decode error: {e}")
+
+        # Fallback: Extract text literals enclosed in (text)
         extracted_strings = re.findall(r'\(([^()]{2,})\)', text)
         if extracted_strings:
             clean_lines = [s.strip() for s in extracted_strings if not re.match(r'^[0-9\s/\\-]+$', s.strip()) and len(s.strip()) > 1]
@@ -58,7 +95,7 @@ def clean_pdf_text_context(text: str) -> str:
                 continue
             if re.match(r'^\s*\d+\s+\d+\s+obj\b', line, re.I) or line.strip().lower() in ("endobj", "stream", "endstream", "xref", "trailer"):
                 continue
-            if line.strip():
+            if line.strip() and "\ufffd" not in line:
                 filtered.append(line)
         return "\n".join(filtered)
 

@@ -47,33 +47,20 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
 
   const handleAttachFile = useCallback((file: File) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const rawText = (e.target?.result as string) || "";
-      let cleanedText = rawText;
 
-      if (file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf") {
-        const extracted = rawText.match(/\(([^()]{2,})\)/g);
-        if (extracted && extracted.length > 3) {
-          const parsedLines = extracted
-            .map((s) => s.slice(1, -1).trim())
-            .filter((s) => s.length > 1 && !/^[0-9\s/\\-]+$/.test(s));
-          if (parsedLines.length > 2) {
-            cleanedText = parsedLines.join("\n");
-          }
-        }
-        if (cleanedText === rawText || cleanedText.includes("/FirstChar")) {
-          cleanedText = rawText
-            .split("\n")
-            .filter((l) => !/\/(FirstChar|LastChar|Widths|FontDescriptor|Encoding|Type|Subtype)/i.test(l))
-            .filter((l) => !/^\s*(\d+\s+){4,}\d+\s*$/.test(l))
-            .filter((l) => !/^\s*\d+\s+\d+\s+obj\b/i.test(l) && !/^(endobj|stream|endstream|xref|trailer)/i.test(l.trim()))
-            .join("\n");
-        }
-      }
-
-      setAttachedFile({ name: file.name, content: cleanedText });
-    };
-    reader.readAsText(file);
+    if (file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf") {
+      reader.onload = (e) => {
+        const dataUrl = (e.target?.result as string) || "";
+        setAttachedFile({ name: file.name, content: dataUrl });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      reader.onload = (e) => {
+        const text = (e.target?.result as string) || "";
+        setAttachedFile({ name: file.name, content: text });
+      };
+      reader.readAsText(file);
+    }
   }, []);
 
   const handleRemoveFile = useCallback(() => {
