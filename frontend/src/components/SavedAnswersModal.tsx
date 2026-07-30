@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, Bookmark, Search, Copy, Check, Trash2 } from "lucide-react";
+import { copyToClipboard } from "../lib/utils";
 
 export interface SavedAnswer {
   id: string;
@@ -50,10 +51,12 @@ export function SavedAnswersModal({ onClose }: SavedAnswersModalProps) {
     localStorage.setItem("alphaask_saved_answers", JSON.stringify(savedAnswers));
   }, [savedAnswers]);
 
-  const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const handleCopy = async (id: string, text: string) => {
+    const ok = await copyToClipboard(text);
+    if (ok) {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    }
   };
 
   const handleDelete = (id: string) => {

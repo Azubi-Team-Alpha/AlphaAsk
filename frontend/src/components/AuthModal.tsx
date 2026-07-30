@@ -104,7 +104,20 @@ export function AuthModal({ mode, onClose, onSwitchMode, onSubmit }: AuthModalPr
             </div>
           </label>
 
-          {error && <div className="aa-form-error">{error}</div>}
+          {error && (
+            <div className="aa-form-error">
+              {error}
+              {error.includes("already registered") && (
+                <button
+                  type="button"
+                  style={{ background: "none", border: "none", color: "var(--aa-accent)", textDecoration: "underline", cursor: "pointer", marginLeft: 6, fontWeight: 600 }}
+                  onClick={() => onSwitchMode("login")}
+                >
+                  Log in instead?
+                </button>
+              )}
+            </div>
+          )}
 
           <button type="submit" className="aa-btn aa-btn-primary aa-modal-submit" disabled={submitting}>
             {submitting ? "Please wait…" : isSignup ? "Sign up" : "Log in"}

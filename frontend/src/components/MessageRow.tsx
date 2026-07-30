@@ -3,7 +3,7 @@ import type { Message } from "../types";
 import { toneStyles } from "../lib/toneStyles";
 import ReactMarkdown from "react-markdown";
 import { Bookmark, BookmarkCheck, Copy, Check } from "lucide-react";
-import { saveAnswerToLocalStorage } from "../lib/utils";
+import { saveAnswerToLocalStorage, copyToClipboard } from "../lib/utils";
 
 interface MessageRowProps {
   message: Message;
@@ -31,10 +31,12 @@ export function MessageRow({ message, previousUserQuestion }: MessageRowProps) {
     }
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(message.content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    const ok = await copyToClipboard(message.content);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
