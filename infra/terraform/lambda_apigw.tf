@@ -33,7 +33,7 @@ resource "aws_apigatewayv2_api" "http_api" {
   protocol_type = "HTTP"
 
   cors_configuration {
-    allow_origins = ["*"]
+    allow_origins = ["https://alphaask.alphateam.live", "http://alphaask.alphateam.live", "*"]
     allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     allow_headers = ["*"]
     max_age       = 300
