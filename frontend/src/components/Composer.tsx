@@ -1,7 +1,12 @@
-import React from "react";
-import { Plus, Send } from "lucide-react";
+import React, { useRef } from "react";
+import { Plus, Send, FileText, X } from "lucide-react";
 import type { SubjectKey } from "../types";
 import { SUBJECTS } from "../lib/constants";
+
+interface AttachedFile {
+  name: string;
+  content: string;
+}
 
 interface ComposerProps {
   draft: string;
@@ -13,6 +18,9 @@ interface ComposerProps {
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
   subject?: SubjectKey;
   setSubject?: (s: SubjectKey | undefined) => void;
+  attachedFile?: AttachedFile | null;
+  onAttachFile?: (file: File) => void;
+  onRemoveFile?: () => void;
   showChips?: boolean;
   chipsAlign?: "center" | "start";
   hint?: string;
@@ -28,10 +36,28 @@ export function Composer({
   textareaRef,
   subject,
   setSubject,
+  attachedFile,
+  onAttachFile,
+  onRemoveFile,
   showChips = false,
   chipsAlign = "center",
   hint,
 }: ComposerProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePlusClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0 && onAttachFile) {
+      onAttachFile(files[0]);
+    }
+    // reset input so same file can be uploaded again if needed
+    e.target.value = "";
+  };
+
   return (
     <div className="aa-composer">
       {showChips && setSubject && (
@@ -55,8 +81,57 @@ export function Composer({
         </div>
       )}
 
+      {attachedFile && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            marginBottom: 6,
+            fontSize: 12,
+            padding: "4px 10px",
+            borderRadius: 6,
+            background: "var(--aa-surface-raised)",
+            border: "1px solid var(--aa-accent)",
+            color: "var(--aa-accent)",
+            width: "fit-content",
+          }}
+        >
+          <FileText size={14} />
+          <span>{attachedFile.name}</span>
+          <button
+            onClick={onRemoveFile}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--aa-accent)",
+              display: "flex",
+              alignItems: "center",
+              padding: 0,
+              marginLeft: 4,
+            }}
+            aria-label="Remove attached file"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      )}
+
       <div className="aa-composer-box">
-        <button className="aa-composer-plus" aria-label="Attach">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept=".pdf,.txt,.md,.doc,.docx"
+          style={{ display: "none" }}
+        />
+        <button
+          className="aa-composer-plus"
+          aria-label="Attach document or lecture notes"
+          onClick={handlePlusClick}
+          title="Attach document or lecture notes"
+        >
           <Plus size={16} />
         </button>
         <textarea

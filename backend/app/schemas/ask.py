@@ -1,11 +1,13 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from uuid import UUID
 from datetime import datetime
 
 
 class AskRequest(BaseModel):
-    question: str = Field(..., min_length=1, max_length=2000)
+    question: str = Field(..., min_length=1, max_length=20000)
     session_id: UUID | str
+    document_context: str | None = None
+    subject: str | None = None
 
 
 class AskResponse(BaseModel):
@@ -19,8 +21,7 @@ class MessageOut(BaseModel):
     content: str
     created_at: datetime | str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class HistoryResponse(BaseModel):
@@ -35,8 +36,7 @@ class QuestionOut(BaseModel):
     session_id: UUID | str
     created_at: datetime | str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class FAQOut(BaseModel):
@@ -46,6 +46,4 @@ class FAQOut(BaseModel):
     category: str
     created_at: datetime | str
 
-    class Config:
-        from_attributes = True
-
+    model_config = ConfigDict(from_attributes=True)

@@ -1,7 +1,12 @@
 import { useCallback, useRef, useState } from "react";
-import { askAlphaAsk, createSession } from "../lib/api-mock";
+import { askAlphaAskStream, createSession } from "../lib/api";
 import { generateUUID } from "../lib/utils";
 import type { Conversation, Message, SubjectKey } from "../types";
+
+interface AttachedFile {
+  name: string;
+  content: string;
+}
 
 interface UseChatOptions {
   isAuthenticated: boolean;
@@ -14,6 +19,7 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [subject, setSubject] = useState<SubjectKey | undefined>(undefined);
+  const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
   const [isThinking, setIsThinking] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -24,6 +30,7 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
     setMessages([]);
     setDraft("");
     setSubject(undefined);
+    setAttachedFile(null);
     textareaRef.current?.focus();
   }, []);
 
@@ -38,38 +45,71 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
     textareaRef.current?.focus();
   }, []);
 
+  const handleAttachFile = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      setAttachedFile({ name: file.name, content: text });
+    };
+    reader.readAsText(file);
+  }, []);
+
+  const handleRemoveFile = useCallback(() => {
+    setAttachedFile(null);
+  }, []);
+
   const handleSend = useCallback(async () => {
     const question = draft.trim();
     if (!question || isThinking) return;
 
+    const userMessageContent = attachedFile
+      ? `📄 [Attached: ${attachedFile.name}]\n\n${question}`
+      : question;
+
     const userMessage: Message = {
       id: generateUUID(),
       role: "user",
-      content: question,
+      content: userMessageContent,
       subject,
       timestamp: Date.now(),
     };
+
     setMessages((prev) => [...prev, userMessage]);
     setDraft("");
+    const docContext = attachedFile?.content;
+    setAttachedFile(null);
     setIsThinking(true);
 
     try {
-      // Create a session on the first message of a new thread
       let sid = sessionId;
       if (!sid) {
         sid = await createSession();
         setSessionId(sid);
       }
 
-      const response = await askAlphaAsk(question, sid);
-
-      const assistantMessage: Message = {
-        id: generateUUID(),
+      // Initialize assistant placeholder message for live streaming
+      const assistantMsgId = generateUUID();
+      const initialAssistantMessage: Message = {
+        id: assistantMsgId,
         role: "assistant",
-        content: response.answer,
+        content: "",
         timestamp: Date.now(),
       };
-      setMessages((prev) => [...prev, assistantMessage]);
+
+      setMessages((prev) => [...prev, initialAssistantMessage]);
+
+      const finalAnswer = await askAlphaAskStream(
+        question,
+        sid,
+        docContext,
+        (textSoFar) => {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMsgId ? { ...msg, content: textSoFar } : msg
+            )
+          );
+        }
+      );
 
       if (isAuthenticated) {
         setConversations((prev) => {
@@ -103,7 +143,7 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
     } finally {
       setIsThinking(false);
     }
-  }, [draft, isThinking, subject, sessionId, isAuthenticated, activeId, setConversations]);
+  }, [draft, isThinking, subject, attachedFile, sessionId, isAuthenticated, activeId, setConversations]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -119,6 +159,7 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
     setMessages([]);
     setActiveId(null);
     setSessionId(null);
+    setAttachedFile(null);
   }, []);
 
   return {
@@ -128,6 +169,9 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
     setDraft,
     subject,
     setSubject,
+    attachedFile,
+    handleAttachFile,
+    handleRemoveFile,
     isThinking,
     textareaRef,
     startNewChat,

@@ -3,6 +3,11 @@ import type { CurrentUser, SubjectKey } from "../types";
 import { STARTERS, SUBJECTS } from "../lib/constants";
 import { Composer } from "./Composer";
 
+interface AttachedFile {
+  name: string;
+  content: string;
+}
+
 interface HeroProps {
   isAuthenticated: boolean;
   currentUser: CurrentUser | null;
@@ -14,6 +19,9 @@ interface HeroProps {
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   subject: SubjectKey | undefined;
   setSubject: (s: SubjectKey | undefined) => void;
+  attachedFile?: AttachedFile | null;
+  onAttachFile?: (file: File) => void;
+  onRemoveFile?: () => void;
   onStarterClick: (prompt: string) => void;
   onSignUpClick: () => void;
 }
@@ -29,6 +37,9 @@ export function Hero({
   textareaRef,
   subject,
   setSubject,
+  attachedFile,
+  onAttachFile,
+  onRemoveFile,
   onStarterClick,
   onSignUpClick,
 }: HeroProps) {
@@ -48,6 +59,9 @@ export function Hero({
           onKeyDown={onKeyDown}
           isThinking={isThinking}
           textareaRef={textareaRef}
+          attachedFile={attachedFile}
+          onAttachFile={onAttachFile}
+          onRemoveFile={onRemoveFile}
         />
 
         <div className="aa-starter-row">

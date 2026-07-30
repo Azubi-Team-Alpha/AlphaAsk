@@ -110,6 +110,9 @@ export default function AlphaAskApp() {
               textareaRef={chat.textareaRef}
               subject={chat.subject}
               setSubject={chat.setSubject}
+              attachedFile={chat.attachedFile}
+              onAttachFile={chat.handleAttachFile}
+              onRemoveFile={chat.handleRemoveFile}
               onStarterClick={chat.handleStarterClick}
               onSignUpClick={() => auth.setAuthModalMode("signup")}
             />
@@ -123,6 +126,9 @@ export default function AlphaAskApp() {
               onKeyDown={chat.handleKeyDown}
               subject={chat.subject}
               setSubject={chat.setSubject}
+              attachedFile={chat.attachedFile}
+              onAttachFile={chat.handleAttachFile}
+              onRemoveFile={chat.handleRemoveFile}
               isAuthenticated={auth.isAuthenticated}
             />
           )}
