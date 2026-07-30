@@ -1,7 +1,7 @@
-# S3 Bucket for React Frontend Static Hosting
+# S3 Bucket for React Frontend Static Hosting (Option 2: Bucket Name Matches Custom Domain)
 
 resource "aws_s3_bucket" "frontend" {
-  bucket        = "${var.app_name}-frontend-static-${var.environment}"
+  bucket        = var.use_custom_domain_bucket ? var.domain_name : "${var.app_name}-frontend-static-${var.environment}"
   force_destroy = true
 }
 

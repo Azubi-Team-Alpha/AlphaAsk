@@ -48,3 +48,15 @@ variable "groq_api_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "domain_name" {
+  description = "Custom domain name matching Cloudflare CNAME and S3 static website bucket name"
+  type        = string
+  default     = "alphaask.alphateam.live"
+}
+
+variable "use_custom_domain_bucket" {
+  description = "Set to true to name S3 bucket exactly as the custom domain name for direct Cloudflare CNAME routing (Option 2)"
+  type        = bool
+  default     = true
+}
