@@ -192,7 +192,36 @@ Students received short, minimal responses when asking for complex help (e.g. es
 ### Solution & Resolution
 1. Removed `"Be concise."` from `SYSTEM_PROMPT` and instructed models to provide detailed explanations, step-by-step guidance, and examples.
 2. Increased `max_tokens` / `maxOutputTokens` from **`1024` to `4096`** across all LLM provider functions in `llm_services.py`.
-3. Increased network timeouts to `45s` and updated the Gemini model candidate chain (`gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-pro`).
+3. Increased network timeouts to `45s` and updated the Gemini model candidate chain (`gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`).
+
+---
+
+## 11. Binary PDF Byte Stream Pollution & Client/Server Text Cleaning
+
+### Problem Statement
+Attaching `.pdf` lecture files via `FileReader.readAsText()` passed raw PDF binary syntax (`6 0 R/FirstChar 32/LastChar 255/Widths[ 278...`) into the question prompt, causing the LLM to output font tables instead of analyzing the document.
+
+### Root Cause
+PDF files are binary objects containing font widths, object streams, and binary metadata headers (`/FirstChar`, `/Widths`, `obj`, `endobj`). Standard plain-text reading dumps raw PDF syntax into the text buffer.
+
+### Solution & Resolution
+1. **Client-Side Cleaning**: Added a text stream parser in [useChat.ts](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/frontend/src/hooks/useChat.ts) to extract string literals enclosed in parentheses `(text)` and strip PDF metric arrays (`278 278 278...`) and dictionary keys (`/FirstChar`, `/Widths`).
+2. **Backend Context Sanitization**: Implemented `clean_pdf_text_context()` in [llm_services.py](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/backend/app/services/llm_services.py) to sanitize incoming document contexts before injecting them into the system prompt.
+
+---
+
+## 12. Real-Time Server-Sent Events (SSE) Word-by-Word Streaming
+
+### Problem Statement
+Synchronous POST requests on `/api/ask` resulted in a 3 to 5 second wait before the entire response appeared in a single block, creating a delayed user experience.
+
+### Root Cause
+The API returned completed JSON payloads only after full model response generation was finished.
+
+### Solution & Resolution
+1. **Streaming Endpoint**: Created POST `/api/ask/stream` returning a `StreamingResponse` with `media_type="text/event-stream"`.
+2. **Multi-Provider Stream Generators**: Added `stream_llm_response()` yielding real-time word chunks.
+3. **Frontend Reader & Fallback**: Added `askAlphaAskStream` in `api.ts` with progressive UI message updating, falling back gracefully to synchronous `/api/ask` if streaming is unsupported.
 
 ---
 
