@@ -57,7 +57,7 @@ jobs:
   provision-base-infra:
     name: 2. Provision ECR Repository
     needs: test-and-validate
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/heads/feat/'))
     runs-on: ubuntu-latest
 
     steps:
