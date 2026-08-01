@@ -72,11 +72,7 @@ class DynamoDBService:
             items = response.get("Items", [])
             if items:
                 return items[0]
-        except Exception:
-            pass
-
-        # Fallback scan
-        try:
+            # Fallback to scan if GSI is backfilling
             response = self.users_table.scan(
                 FilterExpression="email = :email",
                 ExpressionAttributeValues={":email": email}
@@ -86,7 +82,7 @@ class DynamoDBService:
         except Exception as e:
             logger.warning(f"DynamoDB get_user_by_email failed: {e}")
             return None
-    
+
     def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user by ID"""
         try:
