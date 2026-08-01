@@ -88,6 +88,17 @@ resource "aws_dynamodb_table" "questions" {
     type = "S"
   }
 
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "UserQuestionsIndex"
+    hash_key        = "user_id"
+    projection_type = "ALL"
+  }
+
   tags = {
     Name = "${var.app_name}-questions-table"
   }

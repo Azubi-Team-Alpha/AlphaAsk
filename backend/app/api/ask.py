@@ -37,8 +37,17 @@ def ask(
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
 
     # 5. Persist both sides of the exchange
-    dynamodb_service.create_message(session_id, role="user", content=payload.question)
+    user_msg = dynamodb_service.create_message(session_id, role="user", content=payload.question)
     dynamodb_service.create_message(session_id, role="assistant", content=answer)
+
+    # 6. Write to Questions table for fast user-scoped lookup
+    dynamodb_service.create_question_record(
+        user_id=current_user["user_id"],
+        session_id=session_id,
+        message_id=user_msg["message_id"],
+        question=payload.question,
+        answer=answer,
+    )
 
     return AskResponse(
         answer=answer,
@@ -62,15 +71,18 @@ def ask_stream(
     if not session or session["user_id"] != current_user["user_id"]:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
-    # 3. History & Question persistence
+    # 3. History — pull before persisting so the new message isn't included in context
     history = dynamodb_service.get_conversation_history(session_id)
-    dynamodb_service.create_message(session_id, role="user", content=payload.question)
+
+    # 4. Persist user message before streaming starts and capture its ID
+    user_msg = dynamodb_service.create_message(session_id, role="user", content=payload.question)
+    user_msg_id = user_msg["message_id"]
 
     def event_generator():
         accumulated_answer = ""
         try:
             for sse_event in stream_llm_response(history, payload.question, payload.document_context):
-                # Extract chunk to accumulate
+                # Extract chunk to accumulate for persistence
                 if sse_event.startswith("data: "):
                     try:
                         chunk_obj = json.loads(sse_event[6:].strip())
@@ -79,9 +91,16 @@ def ask_stream(
                         pass
                 yield sse_event
 
-            # Persist assistant response upon completion
+            # Persist assistant response and question record upon completion
             if accumulated_answer.strip():
                 dynamodb_service.create_message(session_id, role="assistant", content=accumulated_answer.strip())
+                dynamodb_service.create_question_record(
+                    user_id=current_user["user_id"],
+                    session_id=session_id,
+                    message_id=user_msg_id,
+                    question=payload.question,
+                    answer=accumulated_answer.strip(),
+                )
         except LLMError as e:
             err_data = json.dumps({"error": str(e)})
             yield f"data: {err_data}\n\n"
