@@ -159,15 +159,16 @@ class DynamoDBService:
         return item
     
     def get_session_messages(self, session_id: str) -> List[Dict[str, Any]]:
-        """Get all messages for a session"""
+        """Get all messages for a session sorted chronologically (user question first, assistant answer second)"""
         try:
             response = self.messages_table.query(
                 IndexName="SessionMessagesIndex",
                 KeyConditionExpression="session_id = :session_id",
-                ExpressionAttributeValues={":session_id": session_id},
-                ScanIndexForward=True
+                ExpressionAttributeValues={":session_id": session_id}
             )
-            return response.get("Items", [])
+            items = response.get("Items", [])
+            items.sort(key=lambda x: (x.get("created_at", ""), 0 if x.get("role") == "user" else 1))
+            return items
         except ClientError:
             pass
 
@@ -178,11 +179,12 @@ class DynamoDBService:
                 ExpressionAttributeValues={":session_id": session_id}
             )
             items = response.get("Items", [])
-            items.sort(key=lambda x: x.get("created_at", ""))
+            items.sort(key=lambda x: (x.get("created_at", ""), 0 if x.get("role") == "user" else 1))
             return items
         except ClientError as e:
             logger.warning(f"DynamoDB get_session_messages failed: {e}")
             return []
+
     
     def get_conversation_history(self, session_id: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Get conversation history for context (limited)"""

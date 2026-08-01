@@ -197,13 +197,19 @@ export async function fetchHistory(sessionId: string): Promise<Message[]> {
     const res = await fetch(`${API_BASE}/api/history/${sessionId}`, { headers: getHeaders() });
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.messages || []).map((m: any) => ({
+    const msgs = (data.messages || []).map((m: any) => ({
       id: generateUUID(),
       role: m.role,
       content: m.content,
       timestamp: new Date(m.created_at || Date.now()).getTime(),
     }));
+    msgs.sort((a: Message, b: Message) => {
+      if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+      return a.role === "user" ? -1 : 1;
+    });
+    return msgs;
   } catch {
     return [];
   }
 }
+
