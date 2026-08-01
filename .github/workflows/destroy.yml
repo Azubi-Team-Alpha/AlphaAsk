@@ -56,6 +56,7 @@ jobs:
             terraform import -lock=false aws_iam_policy.lambda_services_access arn:aws:iam::${ACCOUNT_ID}:policy/alphaask-services-policy || true
             terraform import -lock=false aws_iam_role_policy_attachment.lambda_basic_execution alphaask-lambda-exec-role/arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole || true
             terraform import -lock=false aws_iam_role_policy_attachment.lambda_services_attach alphaask-lambda-exec-role/arn:aws:iam::${ACCOUNT_ID}:policy/alphaask-services-policy || true
+            terraform import -lock=false aws_iam_role_policy_attachment.lambda_vpc_access alphaask-lambda-exec-role/arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole || true
           fi
 
           # DynamoDB Tables
@@ -67,6 +68,12 @@ jobs:
 
           # Lambda Function
           terraform import -lock=false aws_lambda_function.backend alphaask-backend || true
+
+          # Lambda Security Group
+          LAMBDA_SG_ID=$(aws ec2 describe-security-groups --group-names alphaask-lambda-sg --query "SecurityGroups[0].GroupId" --output text 2>/dev/null || true)
+          if [ -n "$LAMBDA_SG_ID" ] && [ "$LAMBDA_SG_ID" != "None" ]; then
+            terraform import -lock=false aws_security_group.lambda_sg $LAMBDA_SG_ID || true
+          fi
 
           # S3 Bucket & Policy
           terraform import -lock=false aws_s3_bucket.frontend alphaask-frontend-static-dev || true

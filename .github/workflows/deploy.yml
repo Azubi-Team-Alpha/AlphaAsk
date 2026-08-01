@@ -150,31 +150,38 @@ jobs:
           fi
 
           if [ -n "$ACCOUNT_ID" ] && aws iam get-policy --policy-arn arn:aws:iam::${ACCOUNT_ID}:policy/alphaask-services-policy >/dev/null 2>&1; then
-            terraform import -lock=false aws_iam_policy.lambda_services_access arn:aws:iam::${ACCOUNT_ID}:policy/alphaask-services-policy
-            terraform import -lock=false aws_iam_role_policy_attachment.lambda_basic_execution alphaask-lambda-exec-role/arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-            terraform import -lock=false aws_iam_role_policy_attachment.lambda_services_attach alphaask-lambda-exec-role/arn:aws:iam::${ACCOUNT_ID}:policy/alphaask-services-policy
+            terraform import -lock=false aws_iam_policy.lambda_services_access arn:aws:iam::${ACCOUNT_ID}:policy/alphaask-services-policy || true
+            terraform import -lock=false aws_iam_role_policy_attachment.lambda_basic_execution alphaask-lambda-exec-role/arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole || true
+            terraform import -lock=false aws_iam_role_policy_attachment.lambda_services_attach alphaask-lambda-exec-role/arn:aws:iam::${ACCOUNT_ID}:policy/alphaask-services-policy || true
+            terraform import -lock=false aws_iam_role_policy_attachment.lambda_vpc_access alphaask-lambda-exec-role/arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole || true
           fi
 
           # DynamoDB Tables
           for TBL in Users Sessions Messages Questions FAQ; do
             if aws dynamodb describe-table --table-name alphaask-$TBL >/dev/null 2>&1; then
-              RNAME=$(echo $TBL | tr '[:upper:]' '[:lower:]')
-              terraform import -lock=false aws_dynamodb_table.$RNAME alphaask-$TBL
+              RNAME=$(echo "$TBL" | tr '[:upper:]' '[:lower:]')
+              terraform import -lock=false aws_dynamodb_table.$RNAME alphaask-$TBL || true
             fi
           done
 
           # Lambda Function
           if aws lambda get-function --function-name alphaask-backend >/dev/null 2>&1; then
-            terraform import -lock=false aws_lambda_function.backend alphaask-backend
+            terraform import -lock=false aws_lambda_function.backend alphaask-backend || true
+          fi
+
+          # Lambda Security Group
+          LAMBDA_SG_ID=$(aws ec2 describe-security-groups --group-names alphaask-lambda-sg --query "SecurityGroups[0].GroupId" --output text 2>/dev/null || true)
+          if [ -n "$LAMBDA_SG_ID" ] && [ "$LAMBDA_SG_ID" != "None" ]; then
+            terraform import -lock=false aws_security_group.lambda_sg $LAMBDA_SG_ID || true
           fi
 
           # S3 Bucket & Policy
-          BUCKET_NAME="alphaask.alphateam.live"
-          if aws s3api head-bucket --bucket $BUCKET_NAME >/dev/null 2>&1; then
-            terraform import -lock=false aws_s3_bucket.frontend $BUCKET_NAME
-            terraform import -lock=false aws_s3_bucket_public_access_block.frontend_public $BUCKET_NAME
-            terraform import -lock=false aws_s3_bucket_website_configuration.frontend_website $BUCKET_NAME
-            terraform import -lock=false aws_s3_bucket_policy.frontend_policy $BUCKET_NAME
+          BUCKET_NAME=$(aws s3api list-buckets --query "Buckets[?starts_with(Name, 'alphaask-frontend-static') || Name=='alphaask.alphateam.live'].Name | [0]" --output text 2>/dev/null || echo "")
+          if [ -n "$BUCKET_NAME" ] && [ "$BUCKET_NAME" != "None" ]; then
+            terraform import -lock=false aws_s3_bucket.frontend $BUCKET_NAME || true
+            terraform import -lock=false aws_s3_bucket_public_access_block.frontend_public $BUCKET_NAME || true
+            terraform import -lock=false aws_s3_bucket_website_configuration.frontend_website $BUCKET_NAME || true
+            terraform import -lock=false aws_s3_bucket_policy.frontend_policy $BUCKET_NAME || true
           fi
 
           # Empty old legacy bucket if it exists to allow clean destruction/migration
@@ -186,7 +193,7 @@ jobs:
           # ElastiCache Redis & Security Group
           SG_ID=$(aws ec2 describe-security-groups --group-names alphaask-elasticache-sg --query "SecurityGroups[0].GroupId" --output text 2>/dev/null || true)
           if [ -n "$SG_ID" ] && [ "$SG_ID" != "None" ]; then
-            terraform import -lock=false aws_security_group.elasticache_sg $SG_ID
+            terraform import -lock=false aws_security_group.elasticache_sg $SG_ID || true
           fi
 
           if aws elasticache describe-cache-clusters --cache-cluster-id alphaask-redis >/dev/null 2>&1; then
