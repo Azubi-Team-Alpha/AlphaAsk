@@ -6,33 +6,7 @@
 
 ## 1. System Architecture (Serverless AWS)
 
-```
-                       ┌─────────────────────────────────────────┐
-                       │          Client Browser / UI            │
-                       │   React 19 + TypeScript + Vite + CSS    │
-                       └────────────────────┬────────────────────┘
-                                            │ HTTPS / JSON / SSE
-                                            ▼
-                       ┌─────────────────────────────────────────┐
-                       │       API Gateway / Fast API            │
-                       │        (Local Dev / AWS Lambda)          │
-                       └───────┬─────────────┬─────────────┬─────┘
-                               │             │             │
-             ┌─────────────────┘             │             └─────────────────┐
-             ▼                               ▼                               ▼
-     ┌──────────────┐                 ┌──────────────┐                ┌──────────────┐
-     │  DynamoDB    │                 │    Redis     │                │ Multi-LLM    │
-     │ Persistence  │                 │ Rate Limiter │                │ Orchestrator │
-     └──────────────┘                 └──────────────┘                └──────┬───────┘
-                                                                             │
-                                            ┌────────────────────────────────┼────────────────────────────────┐
-                                            ▼                                ▼                                ▼
-                                     ┌──────────────┐                 ┌──────────────┐                 ┌──────────────┐
-                                     │   Groq Cloud │                 │Google Gemini │                 │ AWS Bedrock  │
-                                     │ (Llama-3.3)  │                 │(Flash 3.6/3.5│                 │ (Claude 3.5) │
-                                     │              │                 │ 2.0 / 1.5)   │                 │              │
-                                     └──────────────┘                 └──────────────┘                 └──────────────┘
-```
+![AlphaPay AWS Architecture Diagram](docs/architecture-diagram.png)
 
 ---
 
