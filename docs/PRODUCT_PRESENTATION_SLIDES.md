@@ -5,33 +5,50 @@
 > **Team**: Team Alpha  
 > **Customer**: Educational Institution  
 > **Date**: August 2026  
+> **Repository**: [https://github.com/Azubi-Team-Alpha/AlphaAsk](https://github.com/Azubi-Team-Alpha/AlphaAsk)  
 
 ---
 
-## Slide Index & Navigation
+## 🎨 Presentation Design System & Theme Specifications
 
-1. [Title & Executive Summary](#slide-1-title--executive-summary)
-2. [Problem Statement & Background](#slide-2-problem-statement--background)
-3. [Solution Overview](#slide-3-solution-overview)
-4. [High-Level Cloud Architecture](#slide-4-high-level-cloud-architecture)
-5. [Frontend & User Experience](#slide-5-frontend--user-experience)
-6. [Backend API & Serverless Execution](#slide-6-backend-api--serverless-execution)
-7. [Multi-Provider AI Orchestration & Failover](#slide-7-multi-provider-ai-orchestration--failover)
-8. [Data Architecture & DynamoDB Optimization](#slide-8-data-architecture--dynamodb-optimization)
-9. [Caching & Rate Limiting (ElastiCache Redis)](#slide-9-caching--rate-limiting-elasticache-redis)
-10. [Infrastructure as Code (Terraform)](#slide-10-infrastructure-as-code-terraform)
-11. [Automated CI/CD Pipeline (GitHub Actions)](#slide-11-automated-cicd-pipeline-github-actions)
-12. [Security, IAM & Least Privilege](#slide-12-security-iam--least-privilege)
-13. [Observability & CloudWatch Monitoring](#slide-13-observability--cloudwatch-monitoring)
-14. [Cost Optimization & Scaling Strategy](#slide-14-cost-optimization--scaling-strategy)
-15. [Technical Challenges & Key Solutions](#slide-15-technical-challenges--key-solutions)
-16. [Live Product Demo Walkthrough](#slide-16-live-product-demo-walkthrough)
-17. [Project Requirements & Compliance Matrix](#slide-17-project-requirements--compliance-matrix)
-18. [Summary & Next Steps](#slide-18-summary--next-steps)
+Follow the design tokens, color palettes, font pairings, and layout guidelines below when presenting in PowerPoint, Google Slides, Keynote, Canva, or Marp.
+
+### 1. Curated Color Palettes
+
+#### Primary Theme: Executive Dark Mode (AWS Midnight & Flame Amber) — **Recommended**
+- **Canvas Background**: Deep Midnight `#0B0F17` (`rgb(11, 15, 23)`)
+- **Card / Surface**: Slate Glass `#1E293B` (`rgb(30, 41, 59)`)
+- **Primary Accent**: AWS Flame Amber `#F97316` (`rgb(249, 115, 22)`)
+- **Secondary Accent**: Electric Cyan `#06B6D4` (`rgb(6, 182, 212)`)
+- **Success / Valid**: Emerald Green `#10B981` (`rgb(16, 185, 129)`)
+- **Text Primary**: Crisp White `#F8FAFC` (`rgb(248, 250, 252)`)
+- **Text Secondary**: Muted Silver `#94A3B8` (`rgb(148, 163, 184)`)
+- **Border / Divider**: Subtly Lit Border `#334155` (`rgb(51, 65, 85)`)
+
+### 2. Typography & Font Pairings
+- **Headers / Slide Titles**: **Outfit** or **Source Serif 4** (700 Bold, `36px - 44px`)
+- **Body / Bullet Points**: **IBM Plex Sans** or **Inter** (400 Regular / 500 Medium, `18px - 22px`)
+- **Code / JSON / CLI**: **IBM Plex Mono** or **JetBrains Mono** (`#0F172A` background, `#38BDF8` text)
 
 ---
 
-### Slide 1: Title & Executive Summary
+## 📋 10-Slide Master Index
+
+1. [Slide 1: Title, Executive Summary & Team Roles](#slide-1-title-executive-summary--team-roles)
+2. [Slide 2: Problem Statement & Project Objectives](#slide-2-problem-statement--project-objectives)
+3. [Slide 3: Solution Overview & Core Capabilities](#slide-3-solution-overview--core-capabilities)
+4. [Slide 4: End-to-End Serverless AWS Architecture](#slide-4-end-to-end-serverless-aws-architecture)
+5. [Slide 5: Multi-Provider AI Orchestration & Streaming](#slide-5-multi-provider-ai-orchestration--streaming)
+6. [Slide 6: Data Architecture & $O(1)$ DynamoDB Optimization](#slide-6-data-architecture--o1-dynamodb-optimization)
+7. [Slide 7: Infrastructure as Code & Automated CI/CD Pipeline](#slide-7-infrastructure-as-code--automated-cicd-pipeline)
+8. [Slide 8: Security, IAM Compliance & CloudWatch Observability](#slide-8-security-iam-compliance--cloudwatch-observability)
+9. [Slide 9: Key Technical Challenges & Engineering Solutions](#slide-9-key-technical-challenges--engineering-solutions)
+10. [Slide 10: Specification Compliance & Project Conclusion](#slide-10-specification-compliance--project-conclusion)
+11. [👉 Live Product & Console Demo Script (Post-Slide Walkthrough)](#-live-product--console-demo-script-post-slide-walkthrough)
+
+---
+
+### Slide 1: Title, Executive Summary & Team Roles
 
 ```
 ================================================================================
@@ -43,39 +60,40 @@
 ================================================================================
 ```
 
-#### Key Highlights
-- **Mission**: Automate academic question answering for university students to eliminate support backlogs and delay times.
-- **Architecture**: Decoupled 100% Serverless Microservices on AWS (React 19 SPA + FastAPI container on AWS Lambda via API Gateway).
-- **AI Intelligence**: Multi-Provider Failover Orchestrator (AWS Bedrock Claude 3.5 Sonnet → Groq Llama 3.3 70B → Google Gemini 2.5/2.0/1.5 Flash).
-- **Data & Speed**: 5 Amazon DynamoDB On-Demand tables with O(1) GSI indexing + ElastiCache Redis rate limiting + SSE streaming.
-- **Automation**: Fully automated GitHub Actions CI/CD pipeline deploying via Terraform IaC.
+#### Executive Summary & Team Collaboration
+- **Mission**: Deliver a 24/7 AI academic assistant to eliminate support queues for university students.
+- **Architecture**: 100% Serverless on AWS (React 19 SPA + FastAPI container on AWS Lambda via API Gateway HTTP API v2).
+- **Agile Execution**: Managed via **Trello Sprint Boards** tracking User Stories, Tech Debt, and QA Verification.
+- **Team Roles**:
+  - **DevOps Lead**: Infrastructure as Code (Terraform), GitHub Actions CI/CD pipeline, ECR & API Gateway.
+  - **Backend Engineer**: FastAPI architecture, DynamoDB service layer, JWT security, and multi-provider LLM failover.
+  - **Frontend / QA Engineer**: React 19 SPA, SSE streaming consumer, dark-mode CSS design system, unit test suites.
 
-> **Speaker Notes**:  
-> Good morning evaluators and stakeholders. Today Team Alpha presents AlphaAsk, an enterprise-grade, serverless AI platform designed to transform academic support for educational institutions. We built this platform from the ground up using AWS Serverless, Docker containers, FastAPI, React 19, and a multi-provider LLM fallback engine.
-
----
-
-### Slide 2: Problem Statement & Background
-
-#### The Challenge Facing Educational Institutions
-- **High Inquiry Volume**: University support staff are overwhelmed by thousands of repetitive academic questions during peak semesters, midterms, and finals.
-- **Delayed Response Times**: Students wait days for email or ticketing responses, disrupting their learning pace and course comprehension.
-- **Strained Manual Resources**: Teaching assistants and administrative staff spend over 60% of their time answering recurring basic questions instead of focusing on high-value mentoring.
-- **Lack of Centralized Tracking**: No automated system exists to capture common student queries, build dynamic FAQs, or analyze learning bottlenecks.
-
-```
-┌───────────────────────────┐      ┌───────────────────────────┐      ┌───────────────────────────┐
-│  Student Query Surge      │ ───► │  Manual Support Backlog   │ ───► │  Delayed Student Help     │
-│  (Exams & Assignments)   │      │  (TA Overload & Strain)   │      │  (24-72 Hour Wait Times)  │
-└───────────────────────────┘      └───────────────────────────┘      └───────────────────────────┘
-```
-
-> **Speaker Notes**:  
-> Our primary customer—an educational institution—faced a classic operational bottleneck: academic queries surged during exams, swamping staff and leaving students stuck without timely assistance. They required a resilient, 24/7 automated platform capable of providing immediate, accurate responses while remaining cost-effective during quiet periods.
+> 🎙️ **Speaker Notes**:  
+> Good morning evaluators and stakeholders. Team Alpha presents AlphaAsk—an enterprise-grade, cloud-native serverless AI platform engineered to solve academic support bottlenecks for educational institutions. We managed our project using Trello agile boards across sprints, dividing roles between DevOps, Backend, and Frontend engineering to deliver a production-ready application.
 
 ---
 
-### Slide 3: Solution Overview
+### Slide 2: Problem Statement & Project Objectives
+
+#### The Academic Support Bottleneck
+- **Inquiry Surges**: Support staff are swamped with thousands of repetitive questions during midterms and finals.
+- **Delayed Student Help**: TAs and Tutors take 24–72 hours to respond via email queues or office hours.
+- **Strained Manual Resources**: Staff spend >60% of their time answering basic recurring questions.
+- **No Centralized Data**: Institutions lack automated tracking of common student learning gaps.
+
+#### Core Project Objectives
+1. **Automate Query Resolution**: Instant AI-generated academic answers across Math, Science, Writing, Code, and History.
+2. **Durable Persistence**: Store all user sessions, messages, and questions in Amazon DynamoDB.
+3. **Automated CI/CD**: 100% automated build, test, and deployment via GitHub Actions & Terraform.
+4. **Zero Idle Overhead**: Fully serverless AWS execution with zero idle compute costs.
+
+> 🎙️ **Speaker Notes**:  
+> Educational institutions face severe operational strain during exam periods. Students wait days for answers, hurting their learning velocity. AlphaAsk addresses this by providing instant 24/7 answers while maintaining zero infrastructure cost when idle.
+
+---
+
+### Slide 3: Solution Overview & Core Capabilities
 
 #### AlphaAsk: Intelligent, Serverless, Always-On Academic Assistance
 
@@ -83,30 +101,30 @@
   ┌─────────────────────────────────────────────────────────────────────────┐
   │                         ALPHAASK SOLUTION                               │
   ├─────────────────────────────────────────────────────────────────────────┤
-  │  1. Instant AI Assistance      │ 2. High-Availability Serverless AWS     │
-  │     - Instant responses via    │    - Zero idle cost (scale-to-zero)    │
-  │       multi-LLM cascade        │    - 100% cloud-native serverless      │
+  │  1. Instant Multi-LLM AI       │ 2. High-Availability Serverless AWS     │
+  │     - Bedrock + Groq + Gemini  │    - AWS Lambda + API Gateway v2        │
+  │     - Zero single-point-of-fail│    - Zero idle compute cost             │
   ├────────────────────────────────┼────────────────────────────────────────┤
   │  3. Real-Time Token Streaming  │ 4. Automated CI/CD & Security           │
-  │     - Live SSE completion      │    - GitHub Actions + Terraform IaC   │
-  │     - Natural typing effect    │    - Least-privilege IAM policies       │
+  │     - Server-Sent Events (SSE) │    - GitHub Actions + Terraform        │
+  │     - Natural typing animation │    - Least-privilege IAM policies       │
   └────────────────────────────────┴────────────────────────────────────────┘
 ```
 
-#### Core Capabilities
-- **24/7 Availability**: Instant, automated AI academic answers across Math, Science, Writing, Code, History, and Study Skills.
-- **Multi-Model Resilience**: Zero single-point-of-failure; automatic failover across Bedrock, Groq, and Gemini.
-- **Persistent Memory**: Saved conversation history, user authentication, session state, and direct question searching.
-- **Zero-Infrastructure Overhead**: Fully serverless setup—paying only for actual CPU time and API requests.
+#### Key Product Features
+- **Real-Time Token Streaming**: Word-by-word streaming using Server-Sent Events (`/api/ask/stream`).
+- **Subject-Aware Guidance**: Tailored academic prompts for Math, Science, Writing, Code, History, and Study Skills.
+- **Session History & Memory**: Automatic persistence and retrieval of prior student chats.
+- **Fail-Safe Rate Limiting**: ElastiCache Redis token bucket protecting endpoints against abuse.
 
-> **Speaker Notes**:  
-> AlphaAsk solves the institution's challenge by delivering a 24/7 intelligent AI academic assistant. Students receive real-time answers streamed to their browsers, while the infrastructure automatically scales from zero to peak demand seamlessly.
+> 🎙️ **Speaker Notes**:  
+> AlphaAsk combines serverless compute with real-time SSE token streaming. Students experience instant, word-by-word AI answers, while our multi-provider fallback engine guarantees uninterrupted uptime even if an underlying LLM service experiences a rate limit.
 
 ---
 
-### Slide 4: High-Level Cloud Architecture
+### Slide 4: End-to-End Serverless AWS Architecture
 
-![AlphaAsk Official AWS Serverless Architecture Diagram](/home/haadi/.gemini/antigravity-ide/brain/73bb1ca2-b6ec-47b0-b609-dc72e725c326/alphaask_official_aws_architecture_diagram_1785598888925.png)
+![AlphaAsk Official AWS Serverless Architecture Diagram](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/alphaask_official_aws_architecture_diagram.png)
 
 ```
                        ┌─────────────────────────────────────────┐
@@ -135,368 +153,181 @@
                                      └──────────────┘                 └──────────────┘                 └──────────────┘
 ```
 
+#### Decoupled Serverless Layer Breakdown
+- **Frontend**: React 19 SPA hosted on Amazon S3 with CloudFront CDN distribution.
+- **API Gateway (HTTP API v2)**: Edge CORS handling and low-latency route proxying (`ANY /{proxy+}`).
+- **AWS Lambda Compute**: Docker container image (`alphaask-backend:latest`) running FastAPI via `Mangum`.
+- **Data & Cache**: 5 DynamoDB On-Demand tables + Amazon ElastiCache for Redis cluster.
 
-#### Architecture Highlights
-- **Static Frontend**: Hosted on Amazon S3 with CloudFront CDN distribution and custom domain routing.
-- **API Entrypoint**: Amazon API Gateway (HTTP API v2) with route proxying (`ANY /{proxy+}`).
-- **Compute Layer**: AWS Lambda running a Docker OCI container image (FastAPI wrapped via `Mangum`).
-- **Data Tier**: Amazon DynamoDB (5 tables) + ElastiCache Redis for rate limiting.
-
-> **Speaker Notes**:  
-> Here is our serverless architecture on AWS. Notice the clear separation of concerns: requests enter via API Gateway, execute in a containerized Lambda function running FastAPI, store data in DynamoDB, and stream responses from our LLM orchestration engine.
-
----
-
-### Slide 5: Frontend & User Experience
-
-#### Modern, Premium React 19 Single Page Application (SPA)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  AlphaAsk UI Component Architecture                                         │
-├───────────────────┬─────────────────────────────────────────────────────────┤
-│  Sidebar          │  Main Chat Workspace                                    │
-│  - User Profile   │  - Header & Subject Taxonomy Chips                      │
-│  - Session History│  - Scrollable Message Feed (Markdown + KaTeX + Prism)   │
-│  - New Chat Button│  - SSE Token-by-Token Streaming Renderer                │
-│  - Auth Triggers  │  - Context Attachment & Prompt Input Bar                │
-└───────────────────┴─────────────────────────────────────────────────────────┘
-```
-
-#### Key Technical Highlights
-- **Framework**: React 19 + TypeScript + Vite.
-- **Design Tokens**: Custom CSS tokens (glassmorphism, subtle micro-animations, accessible contrast ratios).
-- **Streaming UI**: SSE consumer reading chunked HTTP streams (`ReadableStream`), appending tokens live.
-- **State & Session Persistence**: LocalStorage JWT authentication restoration across reloads, global 401 handling.
-- **Rich Rendering**: Full Markdown support, LaTeX mathematical formulas, code syntax highlighting, and copy-to-clipboard.
-
-> **Speaker Notes**:  
-> The frontend provides an intuitive, high-performance UI. It features real-time token streaming, so students see answers generated word-by-word rather than waiting for a full HTTP response.
+> 🎙️ **Speaker Notes**:  
+> Here is our complete AWS architecture. The client browser hits API Gateway, which proxies to our containerized FastAPI Lambda function. Data is persisted in DynamoDB and cached in ElastiCache Redis, while AI inference cascades across Bedrock, Groq, and Gemini.
 
 ---
 
-### Slide 6: Backend API & Serverless Execution
+### Slide 5: Multi-Provider AI Orchestration & Streaming
 
-#### FastAPI + Mangum Docker Container on AWS Lambda
+#### Failover Cascade Architecture
+To eliminate single-provider outages and rate limits, AlphaAsk uses a 3-tier cascade:
 
 ```
-Request ──► API Gateway ──► Lambda (Mangum Adapter) ──► FastAPI Router ──► Response
+           ┌────────────────────────────────────────────────────────┐
+           │                  User Query Submission                 │
+           └───────────────────────────┬────────────────────────────┘
+                                       │
+                                       ▼
+           ┌────────────────────────────────────────────────────────┐
+           │ PRIMARY: AWS Bedrock (Claude 3.5 Sonnet)              │
+           └───────────────────────────┬────────────────────────────┘
+                                       │ (On Failure / Limit)
+                                       ▼
+           ┌────────────────────────────────────────────────────────┐
+           │ FALLBACK 1: Groq Cloud (Llama 3.3 70B Native SSE)       │
+           └───────────────────────────┬────────────────────────────┘
+                                       │ (On Failure / Limit)
+                                       ▼
+           ┌────────────────────────────────────────────────────────┐
+           │ FALLBACK 2: Google Gemini (2.5 / 2.0 / 1.5 Flash)      │
+           └────────────────────────────────────────────────────────┘
 ```
 
-#### Backend Implementation Detail
-- **Language & Runtime**: Python 3.12 running inside an Amazon ECR Docker container image.
-- **ASGI Adapter**: `Mangum(app)` bridges API Gateway v2 payloads to FastAPI ASGI routing seamlessly.
-- **Endpoints**:
-  - `POST /api/auth/register` & `POST /api/auth/login` (JWT auth & bcrypt password hashing)
-  - `POST /api/sessions` & `GET /api/conversations` (Session state & history listing)
-  - `POST /api/ask` (Synchronous LLM query)
-  - `POST /api/ask/stream` (Real-time SSE streaming query)
-  - `GET /api/questions` & `DELETE /api/questions/{id}` (User question management)
-  - `GET /api/FAQ` & `GET /api/health` (FAQ retrieval & system health monitoring)
+#### Real-Time SSE Token Streaming
+- **Endpoint**: `POST /api/ask/stream`
+- **Mechanism**: Streams chunks formatted as `data: {"content": "..."}\n\n` directly to client `ReadableStream`.
+- **User Benefit**: Eliminates long wait times—students see answers begin rendering within milliseconds.
 
-> **Speaker Notes**:  
-> By packaging FastAPI into a Docker container for AWS Lambda, we maintain standard Python code structures while benefiting from 100% serverless scaling and zero idle costs.
+> 🎙️ **Speaker Notes**:  
+> AI reliability is paramount. If AWS Bedrock reaches a quota, our engine seamlessly falls back to Groq Llama 3.3 70B with native chunked streaming, and then to Google Gemini. The student experiences unbroken streaming regardless of provider status.
 
 ---
 
-### Slide 7: Multi-Provider AI Orchestration & Failover
+### Slide 6: Data Architecture & $O(1)$ DynamoDB Optimization
 
-#### Resilient Failover Engine Across 3 AI Providers
+#### DynamoDB Table Matrix & Schema Design
 
-```
-                ┌─────────────────────────────────────────┐
-                │        Incoming Student Question        │
-                └────────────────────┬────────────────────┘
-                                     │
-                                     ▼
-                      ┌─────────────────────────────┐
-                      │   1. AWS Bedrock            │
-                      │   (Claude 3.5 Sonnet)       │
-                      └──────────────┬──────────────┘
-                                     │ (If throttled or error)
-                                     ▼
-                      ┌─────────────────────────────┐
-                      │   2. Groq Cloud API         │
-                      │   (Llama 3.3 70B - Streaming)│
-                      └──────────────┬──────────────┘
-                                     │ (If quota exceeded)
-                                     ▼
-                      ┌─────────────────────────────┐
-                      │   3. Google Gemini API      │
-                      │   (2.5/2.0/1.5 Flash Cascade)│
-                      └─────────────────────────────┘
-```
+| Table Name | Partition Key | Sort Key / GSI | Function |
+|---|---|---|---|
+| `alphaask-Users` | `user_id` (S) | `EmailIndex` (`email`) | Student authentication & profiles |
+| `alphaask-Sessions` | `session_id` (S) | `UserSessionsIndex` (`user_id`) | Conversation thread tracking |
+| `alphaask-Messages` | `message_id` (S) | `SessionMessagesIndex` (`session_id`) | Chronological chat history |
+| `alphaask-Questions` | `id` (S) | `UserQuestionsIndex` (`user_id`) | Fast question history lookups |
+| `alphaask-FAQ` | `faq_id` (S) | N/A | Centralized institutional FAQs |
 
-#### Key Capabilities
-- **Zero Downtime Guarantee**: If one AI provider experiences an outage or rate limit, AlphaAsk automatically falls back to the next provider within milliseconds.
-- **Native Streaming**: Groq chunked HTTP streaming yields tokens directly to SSE generators for low latency.
+#### Performance Engineering: $O(1)$ GSI Indexing
+- **The Problem**: Scanning session messages to build user question lists caused expensive $O(N \times M)$ table scans.
+- **The Optimization**: Created `UserQuestionsIndex` GSI on `alphaask-Questions`. Question records are written on answer creation, allowing questions to be retrieved via direct $O(1)$ GSI query.
+- **Rate Limiting**: ElastiCache Redis sliding-window token bucket (max 10 requests/min per user) with graceful fail-open resilience.
 
-> **Speaker Notes**:  
-> Single-provider AI integrations are vulnerable to API rate limits and outages. AlphaAsk implements a multi-provider failover chain starting with AWS Bedrock, falling back to Groq Llama-3.3 70B, and then Google Gemini.
+> 🎙️ **Speaker Notes**:  
+> We optimized our database layer from expensive $O(N \times M)$ table scans to $O(1)$ GSI queries by indexing `alphaask-Questions` on `user_id`. Redis protects our API from rate limit abuse with fail-open fallback.
 
 ---
 
-### Slide 8: Data Architecture & DynamoDB Optimization
+### Slide 7: Infrastructure as Code & Automated CI/CD Pipeline
 
-#### 5 On-Demand DynamoDB NoSQL Tables
+#### 100% Automated Declarative Infrastructure (Terraform)
+- **Modules**: `ecr.tf`, `dynamodb.tf`, `elasticache.tf`, `iam.tf`, `lambda_apigw.tf`, `s3_cloudfront.tf`.
+- **Zero Drift**: All AWS resources are created, updated, and managed declaratively.
+
+#### 4-Stage GitHub Actions Pipeline (`.github/workflows/deploy.yml`)
 
 ```
-┌─────────────────────┬──────────────────┬───────────────────────┬───────────────────────────────┐
-│ Table Name          │ Partition Key    │ Sort Key / GSI        │ Purpose                       │
-├─────────────────────┼──────────────────┼───────────────────────┼───────────────────────────────┤
-│ alphaask-Users      │ user_id (S)      │ EmailIndex (email)    │ Account credentials & hash    │
-│ alphaask-Sessions   │ session_id (S)   │ UserSessionsIndex     │ Multi-session grouping        │
-│ alphaask-Messages   │ message_id (S)   │ SessionMessagesIndex  │ Chat message transcript       │
-│ alphaask-Questions  │ id (S)           │ UserQuestionsIndex    │ Fast O(1) question lookups    │
-│ alphaask-FAQ        │ faq_id (S)       │ N/A                   │ Static FAQ directory          │
-└─────────────────────┴──────────────────┴───────────────────────┴───────────────────────────────┘
+ ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+ │ STAGE 1:        │     │ STAGE 2:        │     │ STAGE 3:        │     │ STAGE 4:        │
+ │ Test & Validate │ ──► │ Provision ECR   │ ──► │ Build & Push    │ ──► │ Deploy Infra    │
+ │ (Pytest+Vitest) │     │ (Repo Check)    │     │ (Docker Image)  │     │ (Terraform+S3)  │
+ └─────────────────┘     └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
-#### Performance Optimization
-- **Scanning Problem Fixed**: Replaced previous $O(N \times M)$ scan-all-sessions pattern with a targeted `UserQuestionsIndex` GSI on `alphaask-Questions`.
-- **$O(1)$ Time Complexity**: User question listing executes in constant $O(1)$ time via GSI query.
+#### Dynamic API Gateway Injection
+- Stage 4 extracts `API_URL=$(terraform output -raw api_gateway_url)` after `terraform apply`.
+- Compiles React SPA with `VITE_API_BASE_URL="$API_URL" npm run build` and syncs `dist/` to S3.
+- **Result**: Destroying and recreating infrastructure automatically reconnects the frontend to the new API Gateway URL without manual code changes.
 
-> **Speaker Notes**:  
-> We optimized our DynamoDB data layer using Global Secondary Indexes. By creating the UserQuestionsIndex GSI, we reduced question lookup complexity from an expensive scan across all sessions down to a fast $O(1)$ query.
+> 🎙️ **Speaker Notes**:  
+> Our CI/CD pipeline automates everything. When we push code, Stage 1 tests, Stage 2 verifies ECR, Stage 3 builds the Docker container, and Stage 4 runs `terraform apply` while dynamically injecting the new API Gateway URL into the frontend build.
 
 ---
 
-### Slide 9: Caching & Rate Limiting (ElastiCache Redis)
+### Slide 8: Security, IAM Compliance & CloudWatch Observability
 
-#### Multi-Tier Protection & Fail-Open Resilience
+#### Enterprise Security & IAM Hardening
+- **Least Privilege IAM**: Policies restricted strictly to `alphaask-*` DynamoDB table ARNs and Bedrock model ARNs.
+- **Password & Token Security**: Passwords hashed with `bcrypt` (12 rounds). JWTs signed with HS256 algorithm.
+- **Startup Validator**: Pydantic validator in `config.py` enforces strong $\ge 32$-character JWT secrets with safe default fallbacks.
+- **Edge CORS**: API Gateway manages preflight `OPTIONS` requests natively at the edge, returning `200 OK` with single CORS headers.
 
-```
-Request ──► Rate Limiter ──► [ Redis Sliding Window ] ──► Allowed? ──► Execute API
-                                     │
-                             (If Connection Fails)
-                                     ▼
-                          [ Graceful Fail-Open ] ──► Execute API (Unblocked)
-```
+#### CloudWatch Monitoring & Observability
+- **Log Streams**: `/aws/lambda/alphaask-backend` logs container startup, execution, and FastAPI requests.
+- **Gateway Metrics**: API Gateway access logs monitor latency, request counts, and HTTP status codes.
+- **Alarms**: CloudWatch Alarms notify on Lambda error spikes and 5xx response thresholds.
 
-#### Technical Design
-- **Sliding Window Token Bucket**: Implemented via Redis `ZREMRANGEBYSCORE`, `ZADD`, `ZCARD`, and `EXPIRE` pipeline operations.
-- **Protection**: Enforces max 10 requests per minute per user to protect backend LLM quotas.
-- **Graceful Fail-Open**: If Redis is un-provisioned or unreachable, the rate limiter logs a warning and allows requests through without crashing the app.
-
-> **Speaker Notes**:  
-> Rate limiting is backed by ElastiCache Redis using a sliding window algorithm. Crucially, the code is built with a fail-open pattern so that if Redis is offline, user requests continue to function smoothly.
+> 🎙️ **Speaker Notes**:  
+> Security and observability are built-in. We enforce least privilege IAM, bcrypt hashing, edge CORS at API Gateway, and CloudWatch alarms for real-time monitoring and log extraction.
 
 ---
 
-### Slide 10: Infrastructure as Code (Terraform)
+### Slide 9: Key Technical Challenges & Engineering Solutions
 
-#### 100% Declarative AWS Infrastructure Management
-
-```
-infra/terraform/
-├── main.tf              # AWS Provider & Backend settings
-├── variables.tf         # Parameterized configuration (Region, Keys, Names)
-├── outputs.tf           # Terraform output variables (API URLs, Bucket names)
-├── ecr.tf               # Container Image Registry (alphaask-backend)
-├── dynamodb.tf          # 5 DynamoDB Tables + GSIs
-├── elasticache.tf       # Redis Cluster & Security Group
-├── iam.tf               # Lambda Execution Role & IAM policies
-├── lambda_apigw.tf      # AWS Lambda Container Function + API Gateway v2
-└── s3_cloudfront.tf     # S3 Static Website & CloudFront CDN
-```
-
-#### IaC Benefits
-- **Zero Manual Clicks**: Entire environment provisioned via `terraform apply`.
-- **Environment Parity**: Dev, Staging, and Production share identical infrastructure code.
-
-> **Speaker Notes**:  
-> All AWS resources are managed using Terraform. This ensures complete repeatability, eliminates manual cloud console drift, and enables instant setup of new environments.
-
----
-
-### Slide 11: Automated CI/CD Pipeline (GitHub Actions)
-
-#### 4-Stage Automated Pipeline (`.github/workflows/deploy.yml`)
-
-```
-┌───────────────────┐     ┌───────────────────┐     ┌───────────────────┐     ┌───────────────────┐
-│ Stage 1: Validate │ ──► │ Stage 2: ECR      │ ──► │ Stage 3: Docker   │ ──► │ Stage 4: Deploy   │
-│ - Pytest Backend  │     │ - Provision ECR   │     │ - Build Container │     │ - Terraform Apply │
-│ - Vitest Frontend │     │   via Terraform   │     │ - Push to ECR     │     │ - S3 Frontend Sync│
-│ - TF Validate     │     │                   │     │   (latest tag)    │     │ - Invalidate CDN  │
-└───────────────────┘     └───────────────────┘     └───────────────────┘     └───────────────────┘
-```
-
-#### Pipeline Highlights
-- **Triggers**: Automated runs on git pushes to `main`, `dev`, and `feat/*` branches.
-- **Security**: AWS Credentials and API keys securely injected via GitHub Secrets.
-- **Zero Downtime**: Lambda container images updated smoothly without service interruption.
-
-> **Speaker Notes**:  
-> Our 4-stage GitHub Actions pipeline validates code via unit tests, builds the Docker container, pushes to Amazon ECR, and executes Terraform deployment automatically on every git push.
-
----
-
-### Slide 12: Security, IAM & Least Privilege
-
-#### Security-First Architecture Design
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                       SECURITY & PRIVILEGE MATRIX                           │
-├───────────────────┬─────────────────────────────────────────────────────────┤
-│ Layer             │ Protection Mechanism                                    │
-├───────────────────┼─────────────────────────────────────────────────────────┤
-│ IAM Policy        │ Strict resource-level ARNs for DynamoDB & Bedrock       │
-│ Authentication    │ Password hashing via `bcrypt` + JWT (HS256) validation  │
-│ API Gateway CORS  │ Explicit domain allowlist + `allow_credentials = true`  │
-│ Secrets Handling  │ Environment variable injection (Zero hardcoded secrets) │
-│ Secret Validation │ Startup validator enforcing ≥32 character JWT keys      │
-└───────────────────┴─────────────────────────────────────────────────────────┘
-```
-
-#### IAM Policy snippet
-```json
-{
-  "Effect": "Allow",
-  "Action": ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:Query"],
-  "Resource": ["arn:aws:dynamodb:us-east-1:*:table/alphaask-*"]
-}
-```
-
-> **Speaker Notes**:  
-> Security is embedded at every layer. IAM roles adhere strictly to the principle of least privilege, passwords are hashed with bcrypt, CORS is restricted to exact domain allowlists, and a startup validator enforces strong 32+ character JWT secrets.
-
----
-
-### Slide 13: Observability & CloudWatch Monitoring
-
-#### Real-Time Logging, Metrics & Alerting
-
-```
-  ┌─────────────────────────────────────────────────────────────────────────┐
-  │                   AWS CLOUDWATCH OBSERVABILITY                          │
-  ├─────────────────────────────────────────────────────────────────────────┤
-  │  1. CloudWatch Logs (Lambda)   │ 2. API Gateway Access Logs             │
-  │     - Execution stdout/stderr  │    - Request latency & HTTP status     │
-  │     - Mangum ASGI request logs │    - Route traffic metrics             │
-  ├────────────────────────────────┼────────────────────────────────────────┤
-  │  3. CloudWatch Alarms          │ 4. Metrics Dashboard                   │
-  │     - Trigger on Lambda Errors │    - Function duration & cold starts   │
-  │     - Alert on 5xx Error rates │    - DynamoDB consumed capacity units │
-  └────────────────────────────────┴────────────────────────────────────────┘
-```
-
-#### Monitoring Setup
-- **Log Groups**: `/aws/lambda/alphaask-backend` with automatic log retention.
-- **Error Tracking**: Logged stack traces formatted for fast diagnosis.
-
-> **Speaker Notes**:  
-> Observability is powered by AWS CloudWatch. Lambda executions log structured outputs, API Gateway metrics track response latencies, and CloudWatch Alarms notify the engineering team if error thresholds are exceeded.
-
----
-
-### Slide 14: Cost Optimization & Scaling Strategy
-
-#### Maximum Efficiency with Serverless Pay-Per-Use
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         AWS SERVERLESS COST PROFILE                         │
-├───────────────────────┬─────────────────────────────────────────────────────┤
-│ Service Component     │ Cost Model & Free Tier Allocation                   │
-├───────────────────────┼─────────────────────────────────────────────────────┤
-│ AWS Lambda Container  │ $0 when idle. 1,000,000 requests/month FREE         │
-│ Amazon API Gateway v2 │ HTTP API v2: $1.00 per million requests             │
-│ Amazon DynamoDB       │ On-Demand PAY_PER_REQUEST: $0 when no queries       │
-│ Amazon S3 + CDN       │ Static hosting: Minimal storage fractions of a cent │
-└───────────────────────┴─────────────────────────────────────────────────────┘
-```
-
-#### Total Idle Monthly Cost: **$0.00**
-
-> **Speaker Notes**:  
-> AlphaAsk is exceptionally cost-effective. Because every core service uses a scale-to-zero model—Lambda, HTTP API v2, and On-Demand DynamoDB—the entire infrastructure costs zero dollars when idle, making it ideal for university budgets.
-
----
-
-### Slide 15: Technical Challenges & Key Solutions
-
-#### Engineering Obstacles Overcome During Development
-
-| Challenge Encountered | Root Cause | Engineering Solution Implemented |
+| Challenge | Root Cause | Engineering Solution |
 |---|---|---|
-| **CORS Preflight Failure** | API Gateway missing `allow_credentials` & header allowlists | Updated `cors_configuration` in `lambda_apigw.tf` with `allow_credentials = true` and explicit origin allowlist. |
-| **Lambda VPC Network Trap** | Static `vpc_config` attached without NAT Gateway blocked internet | Made `vpc_config` dynamic via `enable_vpc_lambda` (disabled by default) so Lambda has direct access to AWS services and LLM APIs. |
-| **DynamoDB $O(N \times M)$ Scans** | Question retrieval scanned all sessions and all messages | Provisioned `UserQuestionsIndex` GSI on `alphaask-Questions` table and updated `questions.py` to use $O(1)$ index queries. |
-| **Fake Model Names & Mock Streaming** | Legacy model references (`gemini-3.6-flash`) & word-splitting mock | Updated models to `gemini-2.5-flash` and implemented native Groq HTTP chunked SSE streaming (`_stream_groq_native`). |
+| **CORS Preflight Failure & 405 Errors** | Disabling API Gateway CORS caused 405s; enabling both caused duplicate headers | Managed 100% CORS at API Gateway (`lambda_apigw.tf`) and added `CORSMiddleware` with `allow_origin_regex` to FastAPI |
+| **Lambda VPC Network Trap** | Lambda attached to subnets without NAT Gateway lost internet/AWS access | Introduced dynamic `enable_vpc_lambda` variable (default `false`) so Lambda operates with direct internet access |
+| **Reversed Chat History Order** | DynamoDB query returned unordered messages | Updated `get_session_messages()` to sort by timestamp ASC with role priority (`user`=0, `assistant`=1) |
+| **Startup Import Crash on JWT Key** | Validator checked `len < 32` before checking empty string during container init | Re-ordered validator in `config.py` to return fallback default `"alphaask-super-secret-jwt-key..."` |
 
-> **Speaker Notes**:  
-> Engineering is about solving real-world challenges. During development, we resolved preflight CORS mismatches, fixed Lambda VPC internet routing, eliminated $O(N \times M)$ database scans with GSIs, and implemented native SSE streaming.
-
----
-
-### Slide 16: Live Product Demo Walkthrough
-
-#### End-to-End User Journey Demonstration
-
-```
-Step 1: Student Sign-Up / Login ──► JWT Generated ──► Session Saved in LocalStorage
-                                                             │
-Step 2: Enter Query & Subject   ──► POST /api/ask/stream ────┤
-                                                             │
-Step 3: SSE Streaming           ◄── Live Token Stream  ──────┤
-                                                             │
-Step 4: View History & Q&A      ◄── O(1) GSI Lookup    ──────┘
-```
-
-#### Demonstration Flow
-1. **User Authentication**: Register new student account (`POST /api/auth/register`), receive JWT token.
-2. **Interactive Questioning**: Select subject tag ("Computer Science"), ask academic question.
-3. **Live SSE Streaming**: Observe token-by-token answer generation streamed live to the UI.
-4. **History & Persistence**: Refresh page → session state automatically restored from LocalStorage. View history loaded via GSI.
-
-> **Speaker Notes**:  
-> Now let's walk through the live product demonstration. As you can see, signing up issues a secure JWT token. When we ask a question, the response streams live to the screen, and refreshed pages maintain complete state without logging the student out.
+> 🎙️ **Speaker Notes**:  
+> Every complex project encounters challenges. We resolved CORS duplicate header collisions, fixed the Lambda VPC network trap, resolved reversed chat history ordering, and made our container initialization completely bulletproof.
 
 ---
 
-### Slide 17: Project Requirements & Compliance Matrix
+### Slide 10: Specification Compliance & Project Conclusion
 
-#### Azubi Africa Project 3 Specification Checklist
+#### Azubi Africa Project Specification Compliance Matrix
 
-| Requirement | Project Specification | AlphaAsk Implementation | Status |
+| Requirement | Project Specification | Implementation | Status |
 |---|---|---|:---:|
-| **Cloud Hosting** | Host infrastructure on AWS Cloud | Provisioned via Terraform in AWS region `us-east-1` | ✅ **100% Met** |
-| **API Gateway** | Public API Endpoints / Receives Requests | Amazon API Gateway (HTTP API v2) proxying to Lambda | ✅ **100% Met** |
-| **AWS Lambda** | Processes backend API requests | Containerized FastAPI application running on Lambda | ✅ **100% Met** |
-| **DynamoDB** | Store questions & responses durably | 5 On-Demand DynamoDB tables + `UserQuestionsIndex` GSI | ✅ **100% Met** |
-| **AI Integration** | Connect to external AI service | Multi-provider failover: Bedrock → Groq → Gemini | ✅ **100% Met** |
-| **CI/CD Pipeline** | GitHub Actions automated pipeline | 4-stage pipeline testing, building, and deploying IaC | ✅ **100% Met** |
-| **Agile Management**| Track issues using Trello/Jira | Sprint workflow tracking stories, bugs, and tasks | ✅ **100% Met** |
+| **AWS Cloud** | Host infrastructure on AWS Cloud | Provisioned via Terraform in `us-east-1` | ✅ **100% Met** |
+| **API Gateway** | Public API Endpoints / Proxy Requests | Amazon API Gateway (HTTP API v2) | ✅ **100% Met** |
+| **AWS Lambda** | Process backend requests | Docker container image on Lambda | ✅ **100% Met** |
+| **DynamoDB** | Store questions & responses durably | 5 On-Demand DynamoDB tables + GSI | ✅ **100% Met** |
+| **AI Integration** | Connect to external AI service | Bedrock -> Groq -> Gemini failover cascade | ✅ **100% Met** |
+| **CI/CD Pipeline** | GitHub Actions automated workflow | 4-Stage automated pipeline | ✅ **100% Met** |
+| **Agile Management**| Track issues using Trello/Jira | Sprint workflow tracking stories & bugs | ✅ **100% Met** |
 
-> **Speaker Notes**:  
-> AlphaAsk achieves 100% compliance across all required specifications from Azubi Africa, delivering every required feature alongside advanced enhancements like multi-LLM failover and real-time streaming.
+#### Summary
+AlphaAsk delivers a high-performance, cost-optimized AI Academic Support platform that eliminates support queues, guarantees 24/7 availability, and scales to zero when idle.
 
----
-
-### Slide 18: Summary & Next Steps
-
-#### Conclusion & Product Roadmap
-
-```
-  ┌─────────────────────────────────────────────────────────────────────────┐
-  │                         FUTURE ROADMAP                                  │
-  ├─────────────────────────────────────────────────────────────────────────┤
-  │  Phase 1: Multi-Modal Support   │ Phase 2: Vector RAG Search            │
-  │  - Diagram & formula OCR parse  │ - OpenSearch vector store for notes   │
-  ├─────────────────────────────────┼───────────────────────────────────────┤
-  │  Phase 3: Institution Analytics │ Phase 4: LMS Integrations             │
-  │  - TA insights dashboard        │ - Canvas & Moodle LTI integration     │
-  └─────────────────────────────────┴───────────────────────────────────────┘
-```
-
-#### Final Summary
-- **Delivered**: A robust, secure, production-ready AI Student Support Platform built on AWS Serverless.
-- **Impact**: Zero delayed answers for students, zero idle costs for the institution, and full operational resilience.
-
-> **Thank You!**  
-> We welcome your questions and feedback.  
-> **Team Alpha Repository**: `https://github.com/Azubi-Team-Alpha/AlphaAsk`
+> 🎙️ **Speaker Notes**:  
+> In conclusion, AlphaAsk meets 100% of the Azubi Africa Level 2 Project 3 specifications. We now transition to our Live Product, CI/CD, and AWS Console Demonstration.
 
 ---
+
+## 👉 Live Product & Console Demo Script (Post-Slide Walkthrough)
+
+After concluding Slide 10, conduct the live demonstration following this 3-part verification script:
+
+### Part 1: Live AlphaAsk Application Demonstration
+1. **Open Live App**: Navigate to `https://alphaask.alphateam.live` (or S3 website URL).
+2. **User Authentication**: Demonstrate student registration and login (showing JWT token stored in browser `localStorage`).
+3. **Academic Q&A & Real-Time SSE Streaming**:
+   - Select a subject pill (e.g. `Science` or `Code`).
+   - Submit an academic question: *"Explain how AWS Lambda scales automatically."*
+   - Point out the **word-by-word real-time SSE typing animation**.
+4. **Session History & Message Ordering**:
+   - Click to start a new chat session.
+   - Click back on the previous chat session in the sidebar.
+   - Verify that the **User Question appears at the top** and the **AI Answer appears directly underneath**.
+
+### Part 2: GitHub Actions CI/CD Pipeline Verification
+1. **Open GitHub Repository**: Navigate to `https://github.com/Azubi-Team-Alpha/AlphaAsk/actions`.
+2. **Review Execution Log**:
+   - Show Stage 1: Pytest backend tests & Vitest frontend tests.
+   - Show Stage 2: Amazon ECR repository verification.
+   - Show Stage 3: Docker container image build & push.
+   - Show Stage 4: `terraform apply` & dynamic `VITE_API_BASE_URL` injection to S3.
+
+### Part 3: AWS Management Console Verification
+1. **Amazon API Gateway Console**: Show `alphaask-api` HTTP API v2, `ANY /{proxy+}` route, and edge CORS configuration.
+2. **AWS Lambda Console**: Show function `alphaask-backend`, ECR container package type, 512 MB memory, 30s timeout, and environment variables.
+3. **Amazon DynamoDB Console**: Show the 5 active tables (`alphaask-Users`, `Sessions`, `Messages`, `Questions`, `FAQ`) and the `UserQuestionsIndex` GSI on `alphaask-Questions`.
+4. **Amazon ECR Console**: Show repository `alphaask-backend` and uploaded `latest` container image digest.
