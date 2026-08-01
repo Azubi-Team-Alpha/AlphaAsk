@@ -245,6 +245,71 @@ class DynamoDBService:
             logger.warning(f"DynamoDB get_faq_by_id failed: {e}")
             return None
 
+    # Questions table operations
+    def create_question_record(
+        self,
+        user_id: str,
+        session_id: str,
+        message_id: str,
+        question: str,
+        answer: str,
+    ) -> Dict[str, Any]:
+        """Write a question+answer pair into the Questions table for fast user-scoped lookup."""
+        item = {
+            "id": message_id,
+            "user_id": user_id,
+            "session_id": session_id,
+            "question": question,
+            "answer": answer,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        try:
+            self.questions_table.put_item(Item=item)
+        except ClientError as e:
+            logger.warning(f"DynamoDB create_question_record failed: {e}")
+        return item
+
+    def get_user_questions(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get all question records for a user via UserQuestionsIndex GSI."""
+        try:
+            response = self.questions_table.query(
+                IndexName="UserQuestionsIndex",
+                KeyConditionExpression="user_id = :uid",
+                ExpressionAttributeValues={":uid": user_id},
+                ScanIndexForward=False,
+            )
+            return response.get("Items", [])
+        except ClientError:
+            pass
+        # Fallback: scan with filter
+        try:
+            response = self.questions_table.scan(
+                FilterExpression="user_id = :uid",
+                ExpressionAttributeValues={":uid": user_id},
+            )
+            items = response.get("Items", [])
+            items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+            return items
+        except ClientError as e:
+            logger.warning(f"DynamoDB get_user_questions failed: {e}")
+            return []
+
+    def get_question_record(self, question_id: str) -> Optional[Dict[str, Any]]:
+        """Get a single question record by ID."""
+        try:
+            response = self.questions_table.get_item(Key={"id": question_id})
+            return response.get("Item")
+        except ClientError as e:
+            logger.warning(f"DynamoDB get_question_record failed: {e}")
+            return None
+
+    def delete_question_record(self, question_id: str) -> None:
+        """Delete a question record from the Questions table."""
+        try:
+            self.questions_table.delete_item(Key={"id": question_id})
+        except ClientError as e:
+            logger.warning(f"DynamoDB delete_question_record failed: {e}")
+
 
 # Global instance
 dynamodb_service = DynamoDBService()
