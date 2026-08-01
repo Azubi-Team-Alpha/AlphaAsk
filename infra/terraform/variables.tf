@@ -23,9 +23,10 @@ variable "bedrock_model_id" {
 }
 
 variable "jwt_secret_key" {
-  description = "Secret key for JWT token signing — must be at least 32 chars. Supply via TF_VAR_jwt_secret_key or GitHub secret."
+  description = "Secret key for JWT token signing — must be at least 32 chars. Can be overridden via TF_VAR_jwt_secret_key or GitHub secrets."
   type        = string
   sensitive   = true
+  default     = "alphaask-super-secret-jwt-key-2026-production"
 }
 
 variable "enable_cloudfront" {
