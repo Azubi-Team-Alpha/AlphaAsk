@@ -60,3 +60,9 @@ variable "use_custom_domain_bucket" {
   type        = bool
   default     = true
 }
+
+variable "enable_vpc_lambda" {
+  description = "Attach Lambda to VPC (disabled by default so Lambda has direct internet/AWS service access without needing NAT Gateway)"
+  type        = bool
+  default     = false
+}

@@ -38,9 +38,12 @@ resource "aws_lambda_function" "backend" {
   timeout       = 30
   memory_size   = 512
 
-  vpc_config {
-    subnet_ids         = data.aws_subnets.default.ids
-    security_group_ids = [aws_security_group.lambda_sg.id]
+  dynamic "vpc_config" {
+    for_each = var.enable_vpc_lambda ? [1] : []
+    content {
+      subnet_ids         = data.aws_subnets.default.ids
+      security_group_ids = [aws_security_group.lambda_sg.id]
+    }
   }
 
   environment {
@@ -74,10 +77,13 @@ resource "aws_apigatewayv2_api" "http_api" {
       "http://alphaask.alphateam.live",
       "http://localhost:5173",
       "http://localhost:3000",
+      "http://127.0.0.1:5173",
+      "http://alphaask-frontend-static-dev.s3-website-us-east-1.amazonaws.com",
     ]
-    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    allow_headers = ["*"]
-    max_age       = 300
+    allow_methods     = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_headers     = ["Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"]
+    allow_credentials = true
+    max_age           = 300
   }
 }
 
