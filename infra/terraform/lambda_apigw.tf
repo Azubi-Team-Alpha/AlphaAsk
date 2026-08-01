@@ -80,8 +80,8 @@ resource "aws_apigatewayv2_api" "http_api" {
       "http://127.0.0.1:5173",
       "http://alphaask-frontend-static-dev.s3-website-us-east-1.amazonaws.com",
     ]
-    allow_methods     = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    allow_headers     = ["Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"]
+    allow_methods     = ["*"]
+    allow_headers     = ["*"]
     allow_credentials = true
     max_age           = 300
   }
