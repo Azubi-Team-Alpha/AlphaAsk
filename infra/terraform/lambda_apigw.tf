@@ -70,7 +70,23 @@ resource "aws_lambda_function" "backend" {
 resource "aws_apigatewayv2_api" "http_api" {
   name          = "${var.app_name}-api"
   protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_origins = [
+      "https://alphaask.alphateam.live",
+      "http://alphaask.alphateam.live",
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://127.0.0.1:5173",
+      "http://alphaask-frontend-static-dev.s3-website-us-east-1.amazonaws.com",
+    ]
+    allow_methods     = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_headers     = ["*"]
+    allow_credentials = true
+    max_age           = 300
+  }
 }
+
 
 
 resource "aws_apigatewayv2_stage" "default" {
