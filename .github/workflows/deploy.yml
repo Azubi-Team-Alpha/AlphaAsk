@@ -26,6 +26,7 @@ jobs:
           AWS_ACCESS_KEY_ID: testing
           AWS_SECRET_ACCESS_KEY: testing
           AWS_DEFAULT_REGION: us-east-1
+          JWT_SECRET_KEY: alphaask-ci-test-only-secret-not-for-production-use
         run: |
           cd backend
           python -m pip install --upgrade pip
