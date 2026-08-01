@@ -1,10 +1,10 @@
 # AlphaAsk — AI-Powered Student Support Platform
 
-**AlphaAsk** is an enterprise-grade, fully serverless AI academic support platform designed for university students. The application features a modern decoupled microservices architecture comprising a high-performance React 19 single-page application (SPA), a FastAPI Python backend, AWS DynamoDB NoSQL persistence, ElastiCache Redis rate-limiting, and an automated multi-provider LLM failover engine (**Groq Llama-3.3 70B**, **Google Gemini 3.6/3.5/2.0 Flash**, and **AWS Bedrock Claude 3.5 Sonnet**).
+**AlphaAsk** is an enterprise-grade, fully serverless AI academic support platform designed for university students. The application features a modern decoupled architecture comprising a React single-page application (SPA), a FastAPI Python backend, AWS DynamoDB NoSQL persistence, ElastiCache Redis rate-limiting, and an automated multi-provider LLM failover engine (**AWS Bedrock Claude 3.5 Sonnet**, **Groq Llama-3.3 70B**, and **Google Gemini 2.5/2.0/1.5 Flash**).
 
 ---
 
-## 1. System Architecture (Serverless AWS)
+## 1. System Architecture
 
 ```
                        ┌─────────────────────────────────────────┐
@@ -14,7 +14,7 @@
                                             │ HTTPS / JSON / SSE
                                             ▼
                        ┌─────────────────────────────────────────┐
-                       │       API Gateway / Fast API            │
+                       │       API Gateway / FastAPI             │
                        │        (Local Dev / AWS Lambda)          │
                        └───────┬─────────────┬─────────────┬─────┘
                                │             │             │
@@ -28,9 +28,8 @@
                                             ┌────────────────────────────────┼────────────────────────────────┐
                                             ▼                                ▼                                ▼
                                      ┌──────────────┐                 ┌──────────────┐                 ┌──────────────┐
-                                     │   Groq Cloud │                 │Google Gemini │                 │ AWS Bedrock  │
-                                     │ (Llama-3.3)  │                 │(Flash 3.6/3.5│                 │ (Claude 3.5) │
-                                     │              │                 │ 2.0 / 1.5)   │                 │              │
+                                     │ AWS Bedrock  │                 │  Groq Cloud  │                 │Google Gemini │
+                                     │ (Claude 3.5) │                 │ (Llama-3.3)  │                 │ (2.5/2.0/1.5)│
                                      └──────────────┘                 └──────────────┘                 └──────────────┘
 ```
 
@@ -38,53 +37,62 @@
 
 ## 2. Technology Stack
 
-- **Frontend**: React 19, TypeScript, Vite, Lucide Icons, Modern CSS Design Tokens tokens.
-- **Backend API**: Python 3.11+, FastAPI, Uvicorn, Mangum (ASGI Serverless Adapter).
-- **AI Orchestration Engine**: Multi-Provider Failover:
-  1. **Groq Cloud API** (`llama-3.3-70b-versatile`)
-  2. **Google Gemini API** (`gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`)
-  3. **AWS Bedrock** (`us.anthropic.claude-3-5-sonnet-20241022-v2:0`, `us.amazon.nova-micro-v1:0`, `amazon.titan-text-express-v1`)
-- **Database**: Amazon DynamoDB (5 On-Demand NoSQL Tables for `Users`, `Sessions`, `Messages`, `Questions`, `FAQ`).
-- **Authentication**: JWT (JSON Web Tokens via `python-jose`) and `bcrypt` password hashing.
-- **Cache / Rate Limiting**: Amazon ElastiCache for Redis with graceful serverless fallback.
-- **Testing**: Pytest (Backend 13/13 passing) and Vitest + React Testing Library (Frontend 6/6 passing).
-- **Infrastructure as Code**: Terraform (`>= 1.5.0`, AWS Provider `~> 5.0`).
-- **CI/CD Pipeline**: GitHub Actions 4-Stage automated pipeline (`.github/workflows/deploy.yml`).
+- **Frontend**: React 19, TypeScript, Vite, Lucide Icons, Modern Vanilla CSS Design Tokens.
+- **Backend API**: Python 3.12, FastAPI, Uvicorn, Mangum (ASGI Serverless Adapter).
+- **AI Orchestration Engine**: Multi-Provider Failover & Streaming:
+  1. **AWS Bedrock** (`us.anthropic.claude-3-5-sonnet-20241022-v2:0`)
+  2. **Groq Cloud API** (`llama-3.3-70b-versatile` with native SSE streaming)
+  3. **Google Gemini API** (`gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`)
+- **Database**: Amazon DynamoDB (5 On-Demand NoSQL Tables: `Users`, `Sessions`, `Messages`, `Questions` with `UserQuestionsIndex` GSI, and `FAQ`).
+- **Authentication**: JWT (JSON Web Tokens via `python-jose`) and `bcrypt` password hashing via `passlib`.
+- **Cache / Rate Limiting**: Amazon ElastiCache for Redis with graceful fallback.
+- **Testing**: Pytest (Backend) and Vitest + React Testing Library (Frontend).
+- **Infrastructure as Code**: Terraform (`infra/terraform/`).
+- **CI/CD Pipeline**: GitHub Actions automated pipeline (`.github/workflows/deploy.yml`).
 
 ---
 
-## 3. Architecture Requirements Compliance (Azubi Africa Specification)
+## 3. Platform Capabilities & Features
 
-| Required Service / Feature | Slide Description | Implementation Status in AlphaAsk | Compliance |
-|:---|:---|:---|:---:|
-| **AWS Cloud** | Host infrastructure on AWS Cloud | Provisioned via Terraform (`infra/terraform/`) in AWS region `us-east-1` | ✅ **100% Met** |
-| **CI/CD Pipeline** | GitHub Actions automated workflow | 4-Stage CI/CD pipeline (`.github/workflows/deploy.yml`) for lint, test, ECR build, and Terraform deploy | ✅ **100% Met** |
-| **Amazon API Gateway** | Public API Endpoints / Receives Requests | HTTP API v2 instance routing all incoming requests to Lambda (`ANY /{proxy+}`) | ✅ **100% Met** |
-| **AWS Lambda** | Processes backend API requests | FastAPI container image hosted on Amazon ECR and executed serverlessly via Lambda | ✅ **100% Met** |
-| **Amazon DynamoDB** | Store questions, messages, and responses | 5 On-Demand NoSQL tables (`Users`, `Sessions`, `Messages`, `Questions`, `FAQ`) | ✅ **100% Met** |
-| **AI Service** | Call external API / ML model | Multi-Provider failover engine: Groq (`llama-3.3-70b`), Google Gemini (`3.6`/`3.5`/`2.0`/`1.5 Flash`), and AWS Bedrock (`Claude 3.5 Sonnet`) | ✅ **100% Met** |
-| **Trello / Jira** | Agile task & project management | Team workflow tracking user stories, bugs, and sprint task progress | ✅ **100% Met** |
+- **Interactive Academic Assistant**: Natural language Q&A for student inquiries across multiple subjects (Math, Science, Writing, Code, History, and Study Skills).
+- **Real-Time Streaming Responses**: Live token-by-token streaming responses via Server-Sent Events (`/api/ask/stream`).
+- **Multi-Provider LLM Resilience**: Automatic failover cascade ensuring continuous service availability across AWS Bedrock, Groq, and Google Gemini APIs.
+- **Secure Auth & Session Persistence**: Student user registration, encrypted credentials, JWT tokens, and multi-session conversation tracking.
+- **Optimized Question Indexing**: Direct O(1) user question history retrieval powered by DynamoDB Global Secondary Indexing (`UserQuestionsIndex`).
+- **Document Context Support**: Capability to attach text and document context to questions for targeted academic support.
+- **Saved Answers & Bookmarks**: Response bookmarking, subject taxonomy filtering, and quick copy-to-clipboard tools.
 
 ---
 
-## 4. Complete Platform Feature Matrix
+## 4. Repository Structure
 
-| Feature Module | Implementation Details | Status |
-|---|---|:---:|
-| **User Auth & JWT** | Student registration, password hashing (`bcrypt`), JWT bearer tokens | ✅ Operational |
-| **Session Management** | Multi-session creation, switching, timestamps, session message persistence | ✅ Operational |
-| **Multi-LLM Failover** | Groq $\rightarrow$ Gemini 3.6/3.5/2.0 Flash $\rightarrow$ AWS Bedrock failover chain | ✅ Operational |
-| **Real-Time SSE Streaming** | Live word-by-word streaming endpoint (`/api/ask/stream`) via Server-Sent Events | ✅ Operational |
-| **PDF & Document RAG Upload** | Client & server text stream extraction for PDF, TXT, and MD lecture notes | ✅ Operational |
-| **Academic Subjects Explorer** | Taxonomy modal covering Math, Science, Writing, Code, History, and Study Skills | ✅ Operational |
-| **Classes & Courses Manager** | Enrolled course workspace manager (`CS 301`, `MATH 202`, etc.) with local state | ✅ Operational |
-| **Saved Answers & Bookmarks** | Bookmarking AI responses with search filtering, clipboard copy, and removal | ✅ Operational |
-| **Platform Study Toolkit** | System diagnostics, keyboard shortcuts, and academic integrity policies | ✅ Operational |
-| **Automated Test Suites** | Pytest backend suite (13/13) + Vitest frontend suite (6/6) | ✅ Operational |
+```
+alphaask/
+├── backend/
+│   ├── app/
+│   │   ├── api/          # FastAPI routes (ask, auth, history, questions)
+│   │   ├── core/         # Security, JWT, config, rate limiting
+│   │   ├── db/           # DynamoDB data access service
+│   │   ├── schemas/      # Pydantic request/response models
+│   │   ├── services/     # Multi-provider LLM orchestration & SSE streaming
+│   │   └── main.py       # FastAPI application entry point
+│   ├── tests/            # Pytest test suite
+│   ├── Dockerfile        # Container image build for AWS Lambda
+│   └── requirements.txt
+├── frontend/
+│   ├── src/              # React application source code
+│   ├── vite.config.ts    # Vite configuration
+│   └── package.json
+├── infra/
+│   └── terraform/        # Infrastructure configuration (API GW, Lambda, DynamoDB, Redis, S3)
+├── .github/
+│   └── workflows/        # GitHub Actions CI/CD workflow
+└── docs/                 # Platform design & architecture documentation
+```
 
 ---
 
-## 5. API Endpoints Reference
+## 5. API Reference
 
 | Method | Endpoint | Auth Required | Description |
 |:---:|:--- |:---:|:--- |
@@ -92,35 +100,39 @@
 | `POST` | `/auth/register` | No | Student registration, returns JWT token |
 | `POST` | `/auth/login` | No | Student authentication, returns JWT token |
 | `POST` | `/sessions` | Yes | Create a new academic chat session |
-| `GET` | `/sessions` | Yes | List user's active chat sessions |
+| `GET` | `/conversations` | Yes | List user's active conversation sessions |
 | `POST` | `/ask` | Yes | Synchronous question submission & response |
-| `POST` | `/ask/stream` | Yes | Real-time SSE word-by-word streaming response |
+| `POST` | `/ask/stream` | Yes | Real-time SSE streaming response |
 | `GET` | `/history/{session_id}` | Yes | Fetch conversation history for a session |
 | `GET` | `/questions` | Yes | List user's past submitted questions |
-| `GET` | `/questions/{id}` | Yes | Get detailed question by ID |
-| `DELETE` | `/questions/{id}` | Yes | Delete a question and its answer |
+| `GET` | `/questions/{id}` | Yes | Get detailed question record by ID |
+| `DELETE` | `/questions/{id}` | Yes | Delete a question record |
 | `GET` | `/FAQ` | No | Retrieve frequently asked questions |
 
 ---
 
-## 6. Local Setup & Testing
+## 6. Local Setup & Execution
 
-### 6.1 Backend Setup & Unit Tests
+### 6.1 Backend Setup
 
 ```bash
 cd backend
 
-# Activate virtual environment
+# Create & activate virtual environment
+python3 -m venv .venv
 source .venv/bin/activate
 
-# Run Pytest unit test suite
-.venv/bin/pytest
+# Install dependencies
+pip install -r requirements.txt
 
-# Run FastAPI server locally
+# Run backend test suite
+pytest
+
+# Launch FastAPI development server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 6.2 Frontend Setup & Vitest Suite
+### 6.2 Frontend Setup
 
 ```bash
 cd frontend
@@ -128,13 +140,13 @@ cd frontend
 # Install dependencies
 npm install
 
-# Run Vitest unit & component test suite
+# Run frontend unit tests
 npm test
 
-# Run Vite dev server
+# Launch Vite development server
 npm run dev
 
-# Run production build
+# Create production build
 npm run build
 ```
 
@@ -142,7 +154,7 @@ npm run build
 
 ## 7. Documentation Index
 
-- **Comprehensive Architecture Specification**: [docs/SYSTEM_ARCHITECTURE_AND_WORKFLOW.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/SYSTEM_ARCHITECTURE_AND_WORKFLOW.md)
+- **System Architecture & Workflow**: [docs/SYSTEM_ARCHITECTURE_AND_WORKFLOW.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/SYSTEM_ARCHITECTURE_AND_WORKFLOW.md)
 - **Technical Challenges & Solutions Log**: [docs/CHALLENGES_AND_SOLUTIONS.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/CHALLENGES_AND_SOLUTIONS.md)
 - **Serverless Architecture Report**: [docs/DOCKER_SERVERLESS_REPORT.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/DOCKER_SERVERLESS_REPORT.md)
 - **Local Testing & Terraform Guide**: [docs/LOCAL_TESTING_AND_TERRAFORM_GUIDE.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/LOCAL_TESTING_AND_TERRAFORM_GUIDE.md)
