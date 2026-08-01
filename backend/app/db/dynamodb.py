@@ -2,7 +2,7 @@ import os
 import boto3
 import logging
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 from botocore.exceptions import ClientError
 
@@ -52,7 +52,7 @@ class DynamoDBService:
             "email": email,
             "name": name,
             "hashed_password": hashed_password,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
         try:
             self.users_table.put_item(Item=item)
@@ -103,7 +103,7 @@ class DynamoDBService:
         item = {
             "session_id": session_id,
             "user_id": user_id,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
         try:
             self.sessions_table.put_item(Item=item)
@@ -153,7 +153,7 @@ class DynamoDBService:
             "session_id": session_id,
             "role": role,
             "content": content,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
         try:
             self.messages_table.put_item(Item=item)
@@ -218,7 +218,7 @@ class DynamoDBService:
             "question": question,
             "answer": answer,
             "category": category,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
         try:
             self.faq_table.put_item(Item=item)

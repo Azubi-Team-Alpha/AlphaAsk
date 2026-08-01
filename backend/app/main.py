@@ -18,7 +18,6 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://alphaask-frontend-static-dev.s3-website-us-east-1.amazonaws.com",
     ],
-    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

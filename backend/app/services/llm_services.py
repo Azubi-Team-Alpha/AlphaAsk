@@ -164,8 +164,7 @@ def call_gemini_api(conversation_history: list[dict], new_question: str, documen
         raise LLMError("GEMINI_API_KEY is not configured.")
 
     gemini_models = [
-        "gemini-3.6-flash",
-        "gemini-3.5-flash",
+        "gemini-2.5-flash",
         "gemini-2.0-flash",
         "gemini-1.5-flash",
         "gemini-1.5-flash-8b",
@@ -318,11 +317,81 @@ def get_llm_response(conversation_history: list[dict], new_question: str, docume
 
 
 def stream_llm_response(conversation_history: list[dict], new_question: str, document_context: str | None = None) -> Generator[str, None, None]:
-    """Generates SSE formatted string stream yielding chunks of full response."""
-    full_response = get_llm_response(conversation_history, new_question, document_context)
+    """Generates SSE formatted string stream. Uses native Groq streaming when available, falls back to full response."""
 
+    # --- Try native Groq streaming first ---
+    if settings.groq_api_key:
+        try:
+            yield from _stream_groq_native(conversation_history, new_question, document_context)
+            return
+        except Exception as e:
+            print(f"Groq native stream failed, falling back: {e}")
+
+    # --- Fallback: get full response from any provider then emit in chunks ---
+    full_response = get_llm_response(conversation_history, new_question, document_context)
     words = full_response.split(" ")
     chunk_size = 3
     for i in range(0, len(words), chunk_size):
         chunk_text = " ".join(words[i:i + chunk_size]) + (" " if i + chunk_size < len(words) else "")
         yield f"data: {json.dumps({'content': chunk_text})}\n\n"
+
+
+def _stream_groq_native(conversation_history: list[dict], new_question: str, document_context: str | None = None) -> Generator[str, None, None]:
+    """Native streaming from Groq API using chunked HTTP transfer."""
+    if not settings.groq_api_key:
+        raise LLMError("GROQ_API_KEY is not configured.")
+
+    url = "https://api.groq.com/openai/v1/chat/completions"
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for msg in conversation_history:
+        role = "user" if msg.get("role") == "user" else "assistant"
+        content = (msg.get("content") or "").strip()
+        if content:
+            messages.append({"role": role, "content": content})
+
+    question = prepare_user_question(new_question, document_context)
+    messages.append({"role": "user", "content": question})
+
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": messages,
+        "temperature": 0.3,
+        "max_tokens": 4096,
+        "stream": True,
+    }
+
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {settings.groq_api_key}",
+            "User-Agent": "Mozilla/5.0 AlphaAskBackend/1.0",
+            "Accept": "text/event-stream",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            for raw_line in resp:
+                line = raw_line.decode("utf-8").strip()
+                if not line or not line.startswith("data: "):
+                    continue
+                data_str = line[6:]
+                if data_str == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data_str)
+                    delta = chunk["choices"][0].get("delta", {})
+                    content = delta.get("content")
+                    if content:
+                        yield f"data: {json.dumps({'content': content})}\n\n"
+                except (KeyError, json.JSONDecodeError):
+                    continue
+    except urllib.error.HTTPError as err:
+        err_body = err.read().decode("utf-8", errors="ignore")
+        raise LLMError(f"Groq streaming error ({err.code}): {err_body[:200]}")
+    except Exception as e:
+        raise LLMError(f"Groq streaming network error: {str(e)}")
