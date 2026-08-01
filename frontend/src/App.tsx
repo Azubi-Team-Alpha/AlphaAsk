@@ -127,65 +127,143 @@ const STARTERS: { icon: React.ReactNode; label: string; prompt: string }[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Mock API layer — swap these for real network calls
+// ---------------------------------------------------------------------------
+// API layer — real network calls to FastAPI backend
 // ---------------------------------------------------------------------------
 
-async function mockAskAlphaAsk(
-  question: string,
-  _subject: SubjectKey | undefined,
-  _history: Message[]
-): Promise<AskResponse> {
-  // Real implementation, e.g.:
-  
-  const res = await fetch("/api/ask", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, subject: _subject, history: _history }),
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem("aa_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function apiRequest<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const url = `${API_BASE}${path}`;
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+      ...(options.headers ?? {}),
+    },
   });
-  if (!res.ok) throw new Error("AlphaAsk couldn't reach the model.");
-  return res.json();
-
-  await new Promise((r) => setTimeout(r, 900 + Math.random() * 700));
-
-  return {
-    content:
-      `Here's how I'd approach it: break "${question.slice(0, 60)}${
-        question.length > 60 ? "…" : ""
-      }" into the smaller claim it depends on, check that claim on its own, ` +
-      `then build back up to the full answer. Want me to work through it with you step by step, or give you the short version first?`,
-    annotations: [
-      { label: "Clear framing", tone: "positive" },
-      { label: "Try restating the question in your own words first", tone: "tip" },
-    ],
-  };
+  if (res.status === 401) {
+    // Clear stale credentials and bubble up so callers can reset auth state
+    localStorage.removeItem("aa_token");
+    localStorage.removeItem("aa_user");
+    throw Object.assign(new Error("Session expired. Please log in again."), { status: 401 });
+  }
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      detail = body.detail ?? body.message ?? detail;
+    } catch (_) { /* ignore */ }
+    throw new Error(detail);
+  }
+  return res.json() as Promise<T>;
 }
 
-async function mockAuth(payload: AuthPayload): Promise<CurrentUser> {
-  // Real implementation, e.g.:
-  //
-  // const res = await fetch(`/api/auth/${payload.mode}`, {
-  //   method: "POST",
-  //   headers: { "Content-Type": "application/json" },
-  //   body: JSON.stringify(payload),
-  // });
-  // if (!res.ok) throw new Error((await res.json()).message ?? "Something went wrong.");
-  // return res.json();
+async function callAuth(payload: AuthPayload): Promise<CurrentUser> {
+  const endpoint = payload.mode === "signup" ? "/api/auth/register" : "/api/auth/login";
+  const body: Record<string, string> = { email: payload.email, password: payload.password };
+  if (payload.mode === "signup" && payload.name) body.name = payload.name;
 
-  await new Promise((r) => setTimeout(r, 500));
+  const data = await apiRequest<{ access_token: string; name: string; email: string }>(endpoint, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 
-  const name = payload.mode === "signup" ? payload.name || "New student" : "Kwabena Mensah";
-  return { name, initials: initialsFrom(name), email: payload.email };
+  localStorage.setItem("aa_token", data.access_token);
+  const user: CurrentUser = { name: data.name, initials: initialsFrom(data.name), email: data.email };
+  localStorage.setItem("aa_user", JSON.stringify(user));
+  return user;
 }
 
-async function mockFetchConversations(): Promise<Conversation[]> {
-  // Real implementation: return fetch("/api/conversations").then(r => r.json())
-  const now = Date.now();
-  return [
-    { id: "c1", title: "Balancing redox equations", updatedAt: now - 1000 * 60 * 60 * 3, messages: [] },
-    { id: "c2", title: "Thesis statement for essay on migration", updatedAt: now - 1000 * 60 * 60 * 26, messages: [] },
-    { id: "c3", title: "Why does recursion need a base case?", updatedAt: now - 1000 * 60 * 60 * 75, messages: [] },
-  ];
+async function fetchConversations(): Promise<Conversation[]> {
+  const items = await apiRequest<{ id: string; title: string; updatedAt: string | number }[]>("/api/conversations");
+  return items.map((c) => ({
+    id: c.id,
+    title: c.title,
+    updatedAt: typeof c.updatedAt === "string" ? new Date(c.updatedAt).getTime() : c.updatedAt,
+    messages: [],
+  }));
 }
+
+async function createSession(): Promise<string> {
+  const data = await apiRequest<{ session_id: string }>("/api/sessions", { method: "POST" });
+  return data.session_id;
+}
+
+async function fetchHistory(sessionId: string): Promise<Message[]> {
+  const data = await apiRequest<{ messages: { role: string; content: string; created_at: string }[] }>(
+    `/api/history/${sessionId}`
+  );
+  return data.messages.map((m, i) => ({
+    id: `${sessionId}-${i}`,
+    role: m.role as "user" | "assistant",
+    content: m.content,
+    timestamp: new Date(m.created_at).getTime(),
+  }));
+}
+
+// Streams SSE from /api/ask/stream, calling onChunk for each token.
+// Returns a promise that resolves when the stream is complete.
+async function streamAsk(
+  sessionId: string,
+  question: string,
+  subject: SubjectKey | undefined,
+  onChunk: (chunk: string) => void,
+  onError: (err: string) => void
+): Promise<void> {
+  const url = `${API_BASE}/api/ask/stream`;
+  const token = localStorage.getItem("aa_token");
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ question, session_id: sessionId, subject }),
+  });
+
+  if (!res.ok || !res.body) {
+    if (res.status === 401) {
+      localStorage.removeItem("aa_token");
+      localStorage.removeItem("aa_user");
+      throw Object.assign(new Error("Session expired."), { status: 401 });
+    }
+    throw new Error(`Stream error: HTTP ${res.status}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("data: ")) continue;
+      const dataStr = trimmed.slice(6);
+      try {
+        const obj = JSON.parse(dataStr);
+        if (obj.error) { onError(obj.error); return; }
+        if (obj.content) onChunk(obj.content);
+      } catch (_) { /* ignore malformed chunks */ }
+    }
+  }
+}
+
+
 
 // ---------------------------------------------------------------------------
 // Small helpers
@@ -325,18 +403,51 @@ export default function AlphaAskApp() {
   const [authModalMode, setAuthModalMode] = useState<AuthMode | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  // Track the backend session_id for the active conversation
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  // Restore session from localStorage on mount
+  useEffect(() => {
+    const token = localStorage.getItem("aa_token");
+    const userStr = localStorage.getItem("aa_user");
+    if (token && userStr) {
+      try {
+        const user: CurrentUser = JSON.parse(userStr);
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+      } catch (_) {
+        localStorage.removeItem("aa_token");
+        localStorage.removeItem("aa_user");
+      }
+    }
+  }, []);
+
+  const handleAuthError = useCallback((err: unknown) => {
+    const status = (err as any)?.status;
+    if (status === 401) {
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      setMessages([]);
+      setSessionId(null);
+      setActiveId(null);
+      setAuthModalMode("login");
+    }
+  }, []);
 
   const handleAuthSubmit = useCallback(async (payload: AuthPayload) => {
-    const user = await mockAuth(payload);
+    const user = await callAuth(payload);
     setCurrentUser(user);
     setIsAuthenticated(true);
     setAuthModalMode(null);
   }, []);
 
   const handleLogOut = useCallback(() => {
+    localStorage.removeItem("aa_token");
+    localStorage.removeItem("aa_user");
     setIsAuthenticated(false);
     setCurrentUser(null);
     setMessages([]);
+    setSessionId(null);
     setActiveId(null);
   }, []);
 
@@ -358,19 +469,12 @@ export default function AlphaAskApp() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-
     let cancelled = false;
-
-    mockFetchConversations().then((data) => {
-      if (!cancelled) {
-        setConversations(data);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated]);
+    fetchConversations()
+      .then((data) => { if (!cancelled) setConversations(data); })
+      .catch(handleAuthError);
+    return () => { cancelled = true; };
+  }, [isAuthenticated, handleAuthError]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -379,6 +483,7 @@ export default function AlphaAskApp() {
   const startNewChat = useCallback(() => {
     setActiveId(null);
     setMessages([]);
+    setSessionId(null);
     setDraft("");
     setSubject(undefined);
     textareaRef.current?.focus();
@@ -386,11 +491,18 @@ export default function AlphaAskApp() {
 
 
   const openConversation = useCallback(
-    (id: string) => {
+    async (id: string) => {
       setActiveId(id);
+      setSessionId(id);
       setMessages([]);
+      try {
+        const history = await fetchHistory(id);
+        setMessages(history);
+      } catch (err) {
+        handleAuthError(err);
+      }
     },
-    [setActiveId, setMessages]
+    [setActiveId, setMessages, handleAuthError]
   );
 
   const handleStarterClick = useCallback((prompt: string) => {
@@ -410,56 +522,88 @@ export default function AlphaAskApp() {
         subject,
         timestamp: Date.now(),
       };
-      const nextMessages = [...messages, userMessage];
-      setMessages(nextMessages);
+      setMessages((prev) => [...prev, userMessage]);
       setDraft("");
       setIsThinking(true);
 
       try {
-        const response = await mockAskAlphaAsk(question, subject, nextMessages);
-        const assistantMessage: Message = {
-          id: generateUUID(),
-          role: "assistant",
-          content: response.content,
-          annotations: response.annotations,
-          timestamp: Date.now(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
+        // Ensure we have a backend session
+        let sid = sessionId;
+        if (!sid && isAuthenticated) {
+          sid = await createSession();
+          setSessionId(sid);
+        }
 
-        if (isAuthenticated) {
-          setConversations((prev) => {
-            const title =
-              question.slice(0, 48) + (question.length > 48 ? "…" : "");
-            if (activeId) {
-              return prev.map((c) =>
-                c.id === activeId
-                  ? { ...c, title, updatedAt: Date.now() }
-                  : c
+        if (sid) {
+          // Authenticated path: stream from real backend
+          const assistantId = generateUUID();
+          // Insert a placeholder message that we'll update in place
+          setMessages((prev) => [
+            ...prev,
+            { id: assistantId, role: "assistant", content: "", timestamp: Date.now() },
+          ]);
+          setIsThinking(false);
+
+          await streamAsk(
+            sid,
+            question,
+            subject,
+            (chunk) => {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId ? { ...m, content: m.content + chunk } : m
+                )
+              );
+            },
+            (errMsg) => {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId
+                    ? { ...m, content: `AlphaAsk encountered an error: ${errMsg}` }
+                    : m
+                )
               );
             }
-            const newConvo: Conversation = {
-              id: generateUUID(),
-              title,
-              updatedAt: Date.now(),
-              messages: [],
-            };
-            setActiveId(newConvo.id);
+          );
+
+          // Update conversation list
+          const title = question.slice(0, 48) + (question.length > 48 ? "…" : "");
+          setConversations((prev) => {
+            const existing = prev.find((c) => c.id === sid);
+            if (existing) {
+              return prev.map((c) => c.id === sid ? { ...c, title, updatedAt: Date.now() } : c);
+            }
+            const newConvo: Conversation = { id: sid!, title, updatedAt: Date.now(), messages: [] };
+            setActiveId(sid!);
             return [newConvo, ...prev];
           });
+        } else {
+          // Guest path: no backend session, show a friendly nudge
+          setIsThinking(false);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: generateUUID(),
+              role: "assistant",
+              content: "Sign in to get AI-powered answers and save your conversation history.",
+              timestamp: Date.now(),
+            },
+          ]);
         }
-      } catch {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: generateUUID(),
-            role: "assistant",
-            content:
-              "AlphaAsk couldn't reach the model just now. Try sending that again.",
-            timestamp: Date.now(),
-          },
-        ]);
-      } finally {
+      } catch (err) {
         setIsThinking(false);
+        handleAuthError(err);
+        if ((err as any)?.status !== 401) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: generateUUID(),
+              role: "assistant",
+              content: "AlphaAsk couldn't reach the model just now. Try sending that again.",
+              timestamp: Date.now(),
+            },
+          ]);
+        }
       }
     },
     [
@@ -469,11 +613,14 @@ export default function AlphaAskApp() {
       messages,
       isAuthenticated,
       activeId,
+      sessionId,
+      handleAuthError,
       setMessages,
       setDraft,
       setIsThinking,
       setConversations,
       setActiveId,
+      setSessionId,
     ]
   );
 
