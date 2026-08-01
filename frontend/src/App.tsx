@@ -77,10 +77,6 @@ interface Conversation {
   messages: Message[];
 }
 
-interface AskResponse {
-  content: string;
-  annotations?: Annotation[];
-}
 
 interface CurrentUser {
   name: string;
