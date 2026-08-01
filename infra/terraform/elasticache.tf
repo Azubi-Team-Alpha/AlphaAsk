@@ -3,12 +3,14 @@
 resource "aws_security_group" "elasticache_sg" {
   name        = "${var.app_name}-elasticache-sg"
   description = "Security group for AlphaAsk AWS ElastiCache Redis Cluster"
+  vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    from_port   = 6379
-    to_port     = 6379
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 6379
+    to_port         = 6379
+    protocol        = "tcp"
+    security_groups = [aws_security_group.lambda_sg.id]
+    description     = "Allow Redis access from Lambda only"
   }
 
   egress {

@@ -2,8 +2,10 @@ import { useState } from "react";
 import type { Message } from "../types";
 import { toneStyles } from "../lib/toneStyles";
 import ReactMarkdown from "react-markdown";
-import { Bookmark, BookmarkCheck, Copy, Check } from "lucide-react";
+import { Bookmark, BookmarkCheck, Copy, Check, Layers, Quote } from "lucide-react";
 import { saveAnswerToLocalStorage, copyToClipboard } from "../lib/utils";
+import { FlashcardModal } from "./FlashcardModal";
+import { CitationModal } from "./CitationModal";
 
 interface MessageRowProps {
   message: Message;
@@ -13,6 +15,8 @@ interface MessageRowProps {
 export function MessageRow({ message, previousUserQuestion }: MessageRowProps) {
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showFlashcards, setShowFlashcards] = useState(false);
+  const [showCitation, setShowCitation] = useState(false);
 
   if (message.role === "user") {
     return (
@@ -68,6 +72,25 @@ export function MessageRow({ message, previousUserQuestion }: MessageRowProps) {
                 {saved ? <BookmarkCheck size={13} style={{ color: "var(--aa-accent)" }} /> : <Bookmark size={13} />}
                 {saved ? "Saved to Bookmarks!" : "Save answer"}
               </button>
+
+              <button
+                className="aa-action-btn"
+                onClick={() => setShowFlashcards(true)}
+                title="Generate Flashcards & Quiz from this answer"
+              >
+                <Layers size={13} style={{ color: "var(--aa-accent)" }} />
+                Flashcards & Quiz
+              </button>
+
+              <button
+                className="aa-action-btn"
+                onClick={() => setShowCitation(true)}
+                title="Generate Academic Citation (APA, MLA, Harvard, IEEE)"
+              >
+                <Quote size={13} />
+                Cite Answer
+              </button>
+
               <button
                 className="aa-action-btn"
                 onClick={handleCopy}
@@ -80,6 +103,21 @@ export function MessageRow({ message, previousUserQuestion }: MessageRowProps) {
           )}
         </div>
       </div>
+
+      {showFlashcards && (
+        <FlashcardModal
+          onClose={() => setShowFlashcards(false)}
+          title={previousUserQuestion || "Academic Study Subject"}
+          content={message.content}
+        />
+      )}
+
+      {showCitation && (
+        <CitationModal
+          onClose={() => setShowCitation(false)}
+          title={previousUserQuestion || "Academic Subject Explanation"}
+        />
+      )}
     </div>
   );
 }

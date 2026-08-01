@@ -23,10 +23,10 @@ variable "bedrock_model_id" {
 }
 
 variable "jwt_secret_key" {
-  description = "Secret key for JWT token signing"
+  description = "Secret key for JWT token signing — must be at least 32 chars. Can be overridden via TF_VAR_jwt_secret_key or GitHub secrets."
   type        = string
   sensitive   = true
-  default     = "super-secret-jwt-key-alphaask-2026-production"
+  default     = "alphaask-super-secret-jwt-key-2026-production"
 }
 
 variable "enable_cloudfront" {
@@ -47,4 +47,22 @@ variable "groq_api_key" {
   type        = string
   sensitive   = true
   default     = ""
+}
+
+variable "domain_name" {
+  description = "Custom domain name matching Cloudflare CNAME and S3 static website bucket name"
+  type        = string
+  default     = "alphaask.alphateam.live"
+}
+
+variable "use_custom_domain_bucket" {
+  description = "Set to true to name S3 bucket exactly as the custom domain name for direct Cloudflare CNAME routing (Option 2)"
+  type        = bool
+  default     = true
+}
+
+variable "enable_vpc_lambda" {
+  description = "Attach Lambda to VPC (disabled by default so Lambda has direct internet/AWS service access without needing NAT Gateway)"
+  type        = bool
+  default     = false
 }

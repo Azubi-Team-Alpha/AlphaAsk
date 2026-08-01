@@ -420,6 +420,7 @@
 }
 .aa-modal-card {
   position: relative; width: 100%; max-width: 380px;
+  max-height: 90vh; overflow-y: auto;
   background: var(--aa-surface); color: var(--aa-text);
   border: 1px solid var(--aa-border);
   border-radius: 16px; padding: 28px 26px 24px;

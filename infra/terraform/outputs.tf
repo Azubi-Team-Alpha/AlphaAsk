@@ -32,3 +32,8 @@ output "elasticache_redis_endpoint" {
   description = "Primary endpoint address for AWS ElastiCache Redis cluster"
   value       = aws_elasticache_cluster.redis.cache_nodes.0.address
 }
+
+output "cloudflare_cname_target" {
+  description = "Target hostname to paste into your Cloudflare CNAME record for custom domain"
+  value       = aws_s3_bucket_website_configuration.frontend_website.website_endpoint
+}

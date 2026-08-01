@@ -20,7 +20,9 @@ def auth_headers():
 @patch("app.db.dynamodb.dynamodb_service.get_session")
 @patch("app.db.dynamodb.dynamodb_service.get_conversation_history")
 @patch("app.db.dynamodb.dynamodb_service.create_message")
+@patch("app.db.dynamodb.dynamodb_service.create_question_record")
 def test_ask_endpoint_success(
+    mock_create_q,
     mock_create_msg,
     mock_history,
     mock_get_session,
@@ -35,6 +37,8 @@ def test_ask_endpoint_success(
         "user_id": "test-user-id",
     }
     mock_history.return_value = []
+    mock_create_msg.return_value = {"message_id": "test-msg-id"}
+    mock_create_q.return_value = None
 
     payload = {
         "question": "What is clean code?",
