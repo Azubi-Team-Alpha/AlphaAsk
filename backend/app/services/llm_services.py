@@ -124,11 +124,140 @@ def prepare_user_question(new_question: str, document_context: str | None = None
         cleaned_doc = clean_pdf_text_context(document_context)
         parts.append(
             f"[ATTACHED STUDY DOCUMENT / LECTURE NOTES CONTEXT]:\n"
-            f"```\n{cleaned_doc[:15000]}\n```"
+            f"```\n{cleaned_doc[:60000]}\n```"
         )
 
     parts.append(f"[STUDENT QUESTION]: {question}")
     return "\n\n".join(parts)
+
+
+def call_openrouter_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
+    if not settings.openrouter_api_key:
+        raise LLMError("OPENROUTER_API_KEY is not configured.")
+
+    url = "https://openrouter.ai/api/v1/chat/completions"
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for msg in conversation_history:
+        role = "user" if msg.get("role") == "user" else "assistant"
+        content = (msg.get("content") or "").strip()
+        if content:
+            messages.append({"role": role, "content": content})
+
+    question = prepare_user_question(new_question, document_context, subject)
+    messages.append({"role": "user", "content": question})
+
+    models = [
+        settings.openrouter_model_id,
+        "openai/gpt-4o-mini",
+        "google/gemini-2.0-flash-001",
+        "meta-llama/llama-3.3-70b-instruct",
+        "anthropic/claude-3.5-sonnet",
+        "deepseek/deepseek-r1",
+    ]
+    seen = set()
+    model_list = [m for m in models if m and not (m in seen or seen.add(m))]
+
+    last_err = None
+    for model in model_list:
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.3,
+            "max_tokens": 4096,
+        }
+
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {settings.openrouter_api_key}",
+                "HTTP-Referer": "https://alphaask.alphateam.live",
+                "X-OpenRouter-Title": "AlphaAsk Academic Platform",
+                "User-Agent": "Mozilla/5.0 AlphaAskBackend/1.0",
+            },
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=45) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data["choices"][0]["message"]["content"]
+        except urllib.error.HTTPError as err:
+            err_body = err.read().decode("utf-8", errors="ignore")
+            last_err = f"OpenRouter ({model}) Error ({err.code}): {err_body[:200]}"
+            if err.code in (404, 400, 429):
+                continue
+            break
+        except Exception as e:
+            last_err = f"OpenRouter ({model}) network error: {str(e)}"
+            break
+
+    raise LLMError(last_err or "OpenRouter API failed")
+
+
+def _stream_openrouter_native(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> Generator[str, None, None]:
+    """Native streaming from OpenRouter API using OpenAI-compatible chunked HTTP transfer."""
+    if not settings.openrouter_api_key:
+        raise LLMError("OPENROUTER_API_KEY is not configured.")
+
+    url = "https://openrouter.ai/api/v1/chat/completions"
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for msg in conversation_history:
+        role = "user" if msg.get("role") == "user" else "assistant"
+        content = (msg.get("content") or "").strip()
+        if content:
+            messages.append({"role": role, "content": content})
+
+    question = prepare_user_question(new_question, document_context, subject)
+    messages.append({"role": "user", "content": question})
+
+    payload = {
+        "model": settings.openrouter_model_id or "openai/gpt-4o-mini",
+        "messages": messages,
+        "temperature": 0.3,
+        "max_tokens": 4096,
+        "stream": True,
+    }
+
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {settings.openrouter_api_key}",
+            "HTTP-Referer": "https://alphaask.alphateam.live",
+            "X-OpenRouter-Title": "AlphaAsk Academic Platform",
+            "User-Agent": "Mozilla/5.0 AlphaAskBackend/1.0",
+            "Accept": "text/event-stream",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            for raw_line in resp:
+                line = raw_line.decode("utf-8").strip()
+                if not line or not line.startswith("data: "):
+                    continue
+                data_str = line[6:]
+                if data_str == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data_str)
+                    delta = chunk["choices"][0].get("delta", {})
+                    content = delta.get("content")
+                    if content:
+                        yield f"data: {json.dumps({'content': content})}\n\n"
+                except (KeyError, json.JSONDecodeError):
+                    continue
+    except urllib.error.HTTPError as err:
+        err_body = err.read().decode("utf-8", errors="ignore")
+        raise LLMError(f"OpenRouter streaming error ({err.code}): {err_body[:200]}")
+    except Exception as e:
+        raise LLMError(f"OpenRouter streaming network error: {str(e)}")
 
 
 def call_groq_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
@@ -309,6 +438,15 @@ def call_bedrock_api(conversation_history: list[dict], new_question: str, docume
 def get_llm_response(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
     errors = []
 
+    # 1. OpenRouter API (Access to 400+ LLMs)
+    if settings.openrouter_api_key:
+        try:
+            return call_openrouter_api(conversation_history, new_question, document_context, subject)
+        except Exception as e:
+            print(f"OpenRouter API failed: {e}")
+            errors.append(str(e))
+
+    # 2. Groq Cloud API
     if settings.groq_api_key:
         try:
             return call_groq_api(conversation_history, new_question, document_context, subject)
@@ -316,6 +454,7 @@ def get_llm_response(conversation_history: list[dict], new_question: str, docume
             print(f"Groq API failed: {e}")
             errors.append(str(e))
 
+    # 3. Google Gemini API
     if settings.gemini_api_key:
         try:
             return call_gemini_api(conversation_history, new_question, document_context, subject)
@@ -323,6 +462,7 @@ def get_llm_response(conversation_history: list[dict], new_question: str, docume
             print(f"Gemini API failed: {e}")
             errors.append(str(e))
 
+    # 4. AWS Bedrock Runtime
     try:
         return call_bedrock_api(conversation_history, new_question, document_context, subject)
     except Exception as e:
@@ -334,9 +474,17 @@ def get_llm_response(conversation_history: list[dict], new_question: str, docume
 
 
 def stream_llm_response(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> Generator[str, None, None]:
-    """Generates SSE formatted string stream. Uses native Groq streaming when available, falls back to full response."""
+    """Generates SSE formatted string stream. Uses native OpenRouter/Groq streaming when available, falls back to full response."""
 
-    # --- Try native Groq streaming first ---
+    # 1. Native OpenRouter streaming first
+    if settings.openrouter_api_key:
+        try:
+            yield from _stream_openrouter_native(conversation_history, new_question, document_context, subject)
+            return
+        except Exception as e:
+            print(f"OpenRouter native stream failed, falling back to next provider: {e}")
+
+    # 2. Native Groq streaming second
     if settings.groq_api_key:
         try:
             yield from _stream_groq_native(conversation_history, new_question, document_context, subject)
@@ -344,13 +492,14 @@ def stream_llm_response(conversation_history: list[dict], new_question: str, doc
         except Exception as e:
             print(f"Groq native stream failed, falling back: {e}")
 
-    # --- Fallback: get full response from any provider then emit in chunks ---
+    # 3. Fallback: get full response from any provider then emit in chunks
     full_response = get_llm_response(conversation_history, new_question, document_context, subject)
     words = full_response.split(" ")
     chunk_size = 3
     for i in range(0, len(words), chunk_size):
         chunk_text = " ".join(words[i:i + chunk_size]) + (" " if i + chunk_size < len(words) else "")
         yield f"data: {json.dumps({'content': chunk_text})}\n\n"
+
 
 
 def _stream_groq_native(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> Generator[str, None, None]:
