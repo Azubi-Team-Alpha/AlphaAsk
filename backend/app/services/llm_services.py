@@ -227,7 +227,8 @@ def call_openrouter_api(conversation_history: list[dict], new_question: str, doc
         )
 
         try:
-            with urllib.request.urlopen(req, timeout=45) as resp:
+            # 20s timeout — must finish well within API Gateway's 29s hard limit
+            with urllib.request.urlopen(req, timeout=20) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return data["choices"][0]["message"]["content"]
         except urllib.error.HTTPError as err:
@@ -237,8 +238,9 @@ def call_openrouter_api(conversation_history: list[dict], new_question: str, doc
                 continue
             break
         except Exception as e:
-            last_err = f"OpenRouter ({model}) network error: {str(e)}"
-            break
+            last_err = f"OpenRouter ({model}) timeout/network error: {str(e)}"
+            # On timeout, try next model in chain
+            continue
 
     raise LLMError(last_err or "OpenRouter API failed")
 
@@ -267,7 +269,9 @@ def _stream_openrouter_native(conversation_history: list[dict], new_question: st
         "model": target_model,
         "messages": messages,
         "temperature": 0.3,
-        "max_tokens": 4096,
+        # 2048 tokens keeps response within API Gateway's 29s hard timeout.
+        # Typical academic answers fit comfortably within this limit.
+        "max_tokens": 2048,
         "stream": True,
     }
 
@@ -286,7 +290,8 @@ def _stream_openrouter_native(conversation_history: list[dict], new_question: st
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
+        # 25s socket timeout — safely under API Gateway's 29s hard limit
+        with urllib.request.urlopen(req, timeout=25) as resp:
             for raw_line in resp:
                 line = raw_line.decode("utf-8").strip()
                 if not line or not line.startswith("data: "):
@@ -306,7 +311,7 @@ def _stream_openrouter_native(conversation_history: list[dict], new_question: st
         err_body = err.read().decode("utf-8", errors="ignore")
         raise LLMError(f"OpenRouter streaming error ({err.code}): {err_body[:200]}")
     except Exception as e:
-        raise LLMError(f"OpenRouter streaming network error: {str(e)}")
+        raise LLMError(f"OpenRouter streaming timeout/network error: {str(e)}")
 
 
 def call_groq_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> str:

@@ -48,28 +48,41 @@ export function MoreModal({ onClose }: MoreModalProps) {
               AlphaAsk automatically routes questions through a high-availability failover chain to guarantee 99.9% uptime.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {/* Provider 1: OpenRouter — Primary */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, padding: "6px 8px", borderRadius: 8, background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.18)" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--aa-text)" }}>
+                  <CheckCircle2 size={14} style={{ color: "var(--aa-green)" }} />
+                  OpenRouter (400+ Models — GPT-4o, DeepSeek R1, Claude 3.5…)
+                </span>
+                <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "var(--aa-green-bg)", color: "var(--aa-green)", fontWeight: 600 }}>
+                  Primary (Active)
+                </span>
+              </div>
+              {/* Provider 2: Groq */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--aa-text)" }}>
                   <CheckCircle2 size={14} style={{ color: "var(--aa-green)" }} /> Groq Cloud (Llama 3.3 70B)
                 </span>
-                <span style={{ fontSize: 11, padding: "2px 6px", borderRadius: 4, background: "var(--aa-green-bg)", color: "var(--aa-green)", fontWeight: 600 }}>
-                  Primary (Active)
+                <span style={{ fontSize: 11, padding: "2px 6px", borderRadius: 4, background: "var(--aa-surface)", color: "var(--aa-text-muted)" }}>
+                  Fallback #2
                 </span>
               </div>
+              {/* Provider 3: Gemini */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--aa-text)" }}>
                   <CheckCircle2 size={14} style={{ color: "var(--aa-green)" }} /> Google Gemini 2.0 Flash
                 </span>
                 <span style={{ fontSize: 11, padding: "2px 6px", borderRadius: 4, background: "var(--aa-surface)", color: "var(--aa-text-muted)" }}>
-                  Secondary Fallback
+                  Fallback #3
                 </span>
               </div>
+              {/* Provider 4: Bedrock */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--aa-text)" }}>
                   <CheckCircle2 size={14} style={{ color: "var(--aa-green)" }} /> AWS Bedrock (Claude 3.5 / Nova)
                 </span>
                 <span style={{ fontSize: 11, padding: "2px 6px", borderRadius: 4, background: "var(--aa-surface)", color: "var(--aa-text-muted)" }}>
-                  Cloud Fallback
+                  Cloud Fallback #4
                 </span>
               </div>
             </div>
