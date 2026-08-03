@@ -95,6 +95,7 @@ export default function AlphaAskApp() {
           isAuthenticated={auth.isAuthenticated}
           onLoginClick={() => auth.setAuthModalMode("login")}
           onSignUpClick={() => auth.setAuthModalMode("signup")}
+          onFAQClick={() => setShowFAQ(true)}
         />
 
         <div className="aa-thread" ref={scrollRef}>
