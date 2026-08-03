@@ -89,12 +89,12 @@ export async function register(payload: AuthPayload): Promise<CurrentUser> {
   };
 }
 
-export async function askAlphaAsk(question: string, session_id?: string): Promise<{ answer: string; session_id: string }> {
+export async function askAlphaAsk(question: string, session_id?: string, subject?: string): Promise<{ answer: string; session_id: string }> {
   const sid = session_id || generateUUID();
   const res = await fetch(`${API_BASE}/api/ask`, {
     method: "POST",
     headers: getHeaders(),
-    body: JSON.stringify({ question, session_id: sid }),
+    body: JSON.stringify({ question, session_id: sid, subject }),
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ detail: "Request failed" }));
@@ -107,6 +107,7 @@ export async function askAlphaAskStream(
   question: string,
   session_id: string | undefined,
   document_context: string | undefined,
+  subject: string | undefined,
   onChunk: (textSoFar: string) => void
 ): Promise<string> {
   const sid = session_id || generateUUID();
@@ -114,11 +115,11 @@ export async function askAlphaAskStream(
     const res = await fetch(`${API_BASE}/api/ask/stream`, {
       method: "POST",
       headers: getHeaders(),
-      body: JSON.stringify({ question, session_id: sid, document_context }),
+      body: JSON.stringify({ question, session_id: sid, document_context, subject }),
     });
 
     if (!res.ok || !res.body) {
-      const syncRes = await askAlphaAsk(question, sid);
+      const syncRes = await askAlphaAsk(question, sid, subject);
       onChunk(syncRes.answer);
       return syncRes.answer;
     }
