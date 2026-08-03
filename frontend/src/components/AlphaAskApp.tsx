@@ -131,6 +131,7 @@ export default function AlphaAskApp() {
               onAttachFile={chat.handleAttachFile}
               onRemoveFile={chat.handleRemoveFile}
               isAuthenticated={auth.isAuthenticated}
+              onSignUpClick={() => auth.setAuthModalMode("signup")}
             />
           )}
         </div>

@@ -3,7 +3,7 @@ import type { Message, SubjectKey } from "../types";
 import { MessageRow } from "./MessageRow";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 import { Composer } from "./Composer";
-import { Download } from "lucide-react";
+import { Download, BookOpen, LogIn } from "lucide-react";
 import { exportSessionAsMarkdown } from "../lib/utils";
 
 interface AttachedFile {
@@ -24,6 +24,7 @@ interface MessageThreadProps {
   onAttachFile?: (file: File) => void;
   onRemoveFile?: () => void;
   isAuthenticated: boolean;
+  onSignUpClick?: () => void;
 }
 
 export function MessageThread({
@@ -39,11 +40,15 @@ export function MessageThread({
   onAttachFile,
   onRemoveFile,
   isAuthenticated,
+  onSignUpClick,
 }: MessageThreadProps) {
+  const hasMessages = messages.length > 0;
+  const showGuestBanner = !isAuthenticated && hasMessages;
+
   return (
     <>
       <div className="aa-thread-inner">
-        {messages.length > 0 && (
+        {hasMessages && (
           <div style={{ display: "flex", justifyContent: "flex-end", padding: "4px 8px", marginBottom: 12 }}>
             <button
               className="aa-btn"
@@ -61,6 +66,52 @@ export function MessageThread({
           return <MessageRow key={m.id} message={m} previousUserQuestion={prevQuestion} />;
         })}
         {isThinking && <ThinkingIndicator />}
+
+        {showGuestBanner && !isThinking && (
+          <div
+            style={{
+              margin: "18px 0 8px",
+              padding: "14px 18px",
+              borderRadius: 12,
+              background: "linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(168,85,247,0.10) 100%)",
+              border: "1px solid rgba(99,102,241,0.30)",
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: "linear-gradient(135deg, var(--aa-accent), #a855f7)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <BookOpen size={17} color="#fff" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 13.5, fontWeight: 600, color: "var(--aa-text)" }}>
+                Your study session is not being saved
+              </p>
+              <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--aa-text-muted)", lineHeight: 1.5 }}>
+                Sign up for free to save your conversation history, bookmarks, and study notes.
+              </p>
+            </div>
+            <button
+              className="aa-btn aa-btn-primary"
+              style={{ fontSize: 12, padding: "7px 14px", gap: 6, flexShrink: 0, whiteSpace: "nowrap" }}
+              onClick={onSignUpClick}
+            >
+              <LogIn size={13} />
+              Sign up free
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="aa-composer-wrap">
