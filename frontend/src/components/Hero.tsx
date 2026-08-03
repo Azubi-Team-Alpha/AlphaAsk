@@ -1,12 +1,7 @@
 import React from "react";
-import type { CurrentUser, SubjectKey } from "../types";
+import type { CurrentUser, SubjectKey, AttachedFile } from "../types";
 import { STARTERS, SUBJECTS } from "../lib/constants";
 import { Composer } from "./Composer";
-
-interface AttachedFile {
-  name: string;
-  content: string;
-}
 
 interface HeroProps {
   isAuthenticated: boolean;

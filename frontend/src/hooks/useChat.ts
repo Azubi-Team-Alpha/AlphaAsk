@@ -1,11 +1,12 @@
 import { useCallback, useRef, useState } from "react";
 import { askAlphaAskStream, createSession, fetchHistory } from "../lib/api";
 import { generateUUID } from "../lib/utils";
-import type { Conversation, Message, SubjectKey } from "../types";
+import type { Conversation, Message, SubjectKey, AttachedFile } from "../types";
 
-interface AttachedFile {
-  name: string;
-  content: string;
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 interface UseChatOptions {
@@ -55,18 +56,26 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
   }, []);
 
   const handleAttachFile = useCallback((file: File) => {
-    const reader = new FileReader();
+    const maxBytes = 15 * 1024 * 1024; // 15MB max
+    if (file.size > maxBytes) {
+      alert("File size exceeds 15MB limit. Please attach a smaller document.");
+      return;
+    }
 
-    if (file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf") {
+    const reader = new FileReader();
+    const sizeStr = formatFileSize(file.size);
+    const fileName = file.name;
+
+    if (fileName.toLowerCase().endsWith(".pdf") || file.type === "application/pdf") {
       reader.onload = (e) => {
         const dataUrl = (e.target?.result as string) || "";
-        setAttachedFile({ name: file.name, content: dataUrl });
+        setAttachedFile({ name: fileName, content: dataUrl, sizeFormatted: sizeStr, fileType: "pdf" });
       };
       reader.readAsDataURL(file);
     } else {
       reader.onload = (e) => {
         const text = (e.target?.result as string) || "";
-        setAttachedFile({ name: file.name, content: text });
+        setAttachedFile({ name: fileName, content: text, sizeFormatted: sizeStr, fileType: "text" });
       };
       reader.readAsText(file);
     }
@@ -81,7 +90,7 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
     if (!question || isThinking) return;
 
     const userMessageContent = attachedFile
-      ? `📄 [Attached: ${attachedFile.name}]\n\n${question}`
+      ? `📄 [Attached: ${attachedFile.name}${attachedFile.sizeFormatted ? ` (${attachedFile.sizeFormatted})` : ""}]\n\n${question}`
       : question;
 
     const userMessage: Message = {

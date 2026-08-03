@@ -1,18 +1,21 @@
-import { useState } from "react";
-import type { Message } from "../types";
-import { toneStyles } from "../lib/toneStyles";
+import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Bookmark, BookmarkCheck, Copy, Check, Layers, Quote } from "lucide-react";
+import type { Message, Tone } from "../types";
+import { Sparkles, Check, Copy, Bookmark, BookmarkCheck, Layers, Quote } from "lucide-react";
 import { saveAnswerToLocalStorage, copyToClipboard } from "../lib/utils";
 import { FlashcardModal } from "./FlashcardModal";
 import { CitationModal } from "./CitationModal";
-
-import { MermaidRenderer } from "./MermaidRenderer";
 
 interface MessageRowProps {
   message: Message;
   previousUserQuestion?: string;
 }
+
+const toneStyles: Record<Tone, { label: string; className: string; icon: React.ReactNode }> = {
+  informational: { label: "Informational", className: "aa-tag-info", icon: <Sparkles size={11} /> },
+  academic: { label: "Academic", className: "aa-tag-academic", icon: <Sparkles size={11} /> },
+  clarifying: { label: "Clarifying", className: "aa-tag-clarifying", icon: <Sparkles size={11} /> },
+};
 
 export function MessageRow({ message, previousUserQuestion }: MessageRowProps) {
   const [saved, setSaved] = useState(false);
@@ -20,13 +23,7 @@ export function MessageRow({ message, previousUserQuestion }: MessageRowProps) {
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [showCitation, setShowCitation] = useState(false);
 
-  if (message.role === "user") {
-    return (
-      <div className="aa-row aa-user">
-        <div className="aa-bubble-user">{message.content}</div>
-      </div>
-    );
-  }
+  const isUser = message.role === "user";
 
   const handleSave = () => {
     const q = previousUserQuestion || "Academic Answer Bookmark";
@@ -45,6 +42,14 @@ export function MessageRow({ message, previousUserQuestion }: MessageRowProps) {
     }
   };
 
+  if (isUser) {
+    return (
+      <div className="aa-row aa-user">
+        <div className="aa-bubble-user">{message.content}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="aa-row">
       <div className="aa-assistant-wrap">
@@ -54,11 +59,6 @@ export function MessageRow({ message, previousUserQuestion }: MessageRowProps) {
             <ReactMarkdown
               components={{
                 code({ inline, className, children, ...props }: any) {
-                  const match = /language-(\w+)/.exec(className || "");
-                  const lang = match ? match[1] : "";
-                  if (!inline && lang === "mermaid") {
-                    return <MermaidRenderer chart={String(children).replace(/\n$/, "")} />;
-                  }
                   return (
                     <code className={className} {...props}>
                       {children}

@@ -59,3 +59,10 @@ export interface FAQ {
   category: string;
   created_at: string;
 }
+
+export interface AttachedFile {
+  name: string;
+  content: string;
+  sizeFormatted?: string;
+  fileType?: string;
+}

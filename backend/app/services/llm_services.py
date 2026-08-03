@@ -29,7 +29,6 @@ SYSTEM_PROMPT = (
     "(coursework, research methods, study skills, referencing, subject explanations). "
     "If asked something off-topic, politely redirect the student back to academic questions. "
     "Structure your responses cleanly using clear Markdown (with headings, bullet points, numbered lists, and bold text for key concepts). "
-    "When explaining processes, workflows, timelines, algorithms, biological/chemical pathways, or system architectures, include clean ```mermaid diagram code blocks to visualize the concepts. "
     "Provide detailed explanations, examples, and step-by-step guidance. Cite sources where relevant."
 )
 
@@ -100,7 +99,16 @@ def clean_pdf_text_context(text: str) -> str:
                 filtered.append(line)
         return "\n".join(filtered)
 
-    return text
+    # Clean plain text documents (txt, md, docx text, csv, json, code):
+    # Remove null bytes, non-printable control chars, and XML/HTML tag noise
+    cleaned = text.replace("\x00", "").replace("\r\n", "\n")
+    cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', cleaned)
+    # Strip raw XML tags if user uploaded raw docx/xml text dump
+    if "<w:p" in cleaned or "<xml" in cleaned:
+        cleaned = re.sub(r'<[^>]+>', ' ', cleaned)
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+
+    return cleaned
 
 
 SUBJECT_PERSONAS = {
@@ -122,10 +130,11 @@ def prepare_user_question(new_question: str, document_context: str | None = None
 
     if document_context and document_context.strip():
         cleaned_doc = clean_pdf_text_context(document_context)
-        parts.append(
-            f"[ATTACHED STUDY DOCUMENT / LECTURE NOTES CONTEXT]:\n"
-            f"```\n{cleaned_doc[:60000]}\n```"
-        )
+        if cleaned_doc:
+            parts.append(
+                f"[ATTACHED STUDY DOCUMENT / LECTURE NOTES CONTEXT]:\n"
+                f"```\n{cleaned_doc[:60000]}\n```"
+            )
 
     parts.append(f"[STUDENT QUESTION]: {question}")
     return "\n\n".join(parts)

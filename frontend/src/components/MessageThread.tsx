@@ -1,15 +1,10 @@
 import React from "react";
-import type { Message, SubjectKey } from "../types";
+import type { Message, SubjectKey, AttachedFile } from "../types";
 import { MessageRow } from "./MessageRow";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 import { Composer } from "./Composer";
 import { Download, BookOpen, LogIn } from "lucide-react";
 import { exportSessionAsMarkdown } from "../lib/utils";
-
-interface AttachedFile {
-  name: string;
-  content: string;
-}
 
 interface MessageThreadProps {
   messages: Message[];

@@ -1,12 +1,7 @@
 import React, { useRef } from "react";
 import { Plus, Send, FileText, X } from "lucide-react";
-import type { SubjectKey } from "../types";
+import type { SubjectKey, AttachedFile } from "../types";
 import { SUBJECTS } from "../lib/constants";
-
-interface AttachedFile {
-  name: string;
-  content: string;
-}
 
 interface ComposerProps {
   draft: string;
@@ -98,7 +93,10 @@ export function Composer({
           }}
         >
           <FileText size={14} />
-          <span>{attachedFile.name}</span>
+          <span>
+            {attachedFile.name}
+            {attachedFile.sizeFormatted ? ` (${attachedFile.sizeFormatted})` : ""}
+          </span>
           <button
             onClick={onRemoveFile}
             style={{
@@ -123,7 +121,7 @@ export function Composer({
           type="file"
           ref={fileInputRef}
           onChange={handleFileChange}
-          accept=".pdf,.txt,.md,.doc,.docx"
+          accept=".pdf,.txt,.md,.doc,.docx,.csv,.json,.py,.js,.ts,.jsx,.tsx,.java,.cpp,.c,.h,.hpp,.cs,.html,.css,.sql,.r,.sh"
           style={{ display: "none" }}
         />
         <button
