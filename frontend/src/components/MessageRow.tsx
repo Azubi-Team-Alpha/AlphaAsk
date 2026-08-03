@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import type { Message, Tone } from "../types";
+import type { Message, AnnotationTone } from "../types";
 import { Sparkles, Check, Copy, Bookmark, BookmarkCheck, Layers, Quote } from "lucide-react";
 import { saveAnswerToLocalStorage, copyToClipboard } from "../lib/utils";
 import { FlashcardModal } from "./FlashcardModal";
@@ -11,10 +11,10 @@ interface MessageRowProps {
   previousUserQuestion?: string;
 }
 
-const toneStyles: Record<Tone, { label: string; className: string; icon: React.ReactNode }> = {
-  informational: { label: "Informational", className: "aa-tag-info", icon: <Sparkles size={11} /> },
-  academic: { label: "Academic", className: "aa-tag-academic", icon: <Sparkles size={11} /> },
-  clarifying: { label: "Clarifying", className: "aa-tag-clarifying", icon: <Sparkles size={11} /> },
+const toneStyles: Record<AnnotationTone, { label: string; className: string; icon: React.ReactNode }> = {
+  positive: { label: "Informational", className: "aa-tag-info", icon: <Sparkles size={11} /> },
+  tip: { label: "Academic", className: "aa-tag-academic", icon: <Sparkles size={11} /> },
+  watch: { label: "Clarifying", className: "aa-tag-clarifying", icon: <Sparkles size={11} /> },
 };
 
 export function MessageRow({ message, previousUserQuestion }: MessageRowProps) {
