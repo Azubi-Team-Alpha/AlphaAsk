@@ -92,3 +92,26 @@ export function saveAnswerToLocalStorage(question: string, answer: string, subje
     return false;
   }
 }
+
+export function exportSessionAsMarkdown(messages: any[], title?: string) {
+  if (!messages || messages.length === 0) return;
+  const header = `# AlphaAsk Academic Study Guide\n**Generated:** ${new Date().toLocaleString()}\n**Topic:** ${title || "Course Revision & Q&A"}\n\n---\n\n`;
+  const body = messages
+    .map((m) => {
+      const roleName = m.role === "user" ? "### 👤 Student Question" : "### 🤖 AlphaAsk Answer";
+      return `${roleName}\n${m.content}\n`;
+    })
+    .join("\n---\n\n");
+
+  const fullContent = header + body;
+  const blob = new Blob([fullContent], { type: "text/markdown;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", `AlphaAsk_Study_Guide_${Date.now()}.md`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+

@@ -103,19 +103,35 @@ def clean_pdf_text_context(text: str) -> str:
     return text
 
 
-def prepare_user_question(new_question: str, document_context: str | None = None) -> str:
+SUBJECT_PERSONAS = {
+    "math": "DISCIPLINE: Mathematics & Problem Solving\n- Focus: Provide step-by-step mathematical reasoning, define variables clearly, format formulas, and explain geometric intuition.",
+    "science": "DISCIPLINE: Science & Engineering\n- Focus: Explain core reaction mechanisms, physical principles, biological pathways, and laboratory fundamentals with step-by-step breakdowns.",
+    "writing": "DISCIPLINE: Writing & Humanities\n- Focus: Emphasize thesis formulation, essay structure, academic rhetoric, argumentation, and citation guidelines (APA/MLA).",
+    "code": "DISCIPLINE: Programming & Computer Science\n- Focus: Provide clean code snippets, analyze Big-O complexity, explain algorithm steps, handle edge cases, and debug errors.",
+    "history": "DISCIPLINE: History & Social Sciences\n- Focus: Highlight historical context, primary source analysis, economic principles, cause-and-effect relationships, and comparative analysis.",
+    "study": "DISCIPLINE: Study Strategy & Revision\n- Focus: Offer active recall methods, Pomodoro technique advice, Feynman technique breakdowns, and structured revision plans."
+}
+
+
+def prepare_user_question(new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
     question = new_question.strip() or "Hello"
+    parts = []
+
+    if subject and subject.lower() in SUBJECT_PERSONAS:
+        parts.append(f"[{SUBJECT_PERSONAS[subject.lower()]}]")
+
     if document_context and document_context.strip():
         cleaned_doc = clean_pdf_text_context(document_context)
-        return (
+        parts.append(
             f"[ATTACHED STUDY DOCUMENT / LECTURE NOTES CONTEXT]:\n"
-            f"```\n{cleaned_doc[:15000]}\n```\n\n"
-            f"[STUDENT QUESTION]: {question}"
+            f"```\n{cleaned_doc[:15000]}\n```"
         )
-    return question
+
+    parts.append(f"[STUDENT QUESTION]: {question}")
+    return "\n\n".join(parts)
 
 
-def call_groq_api(conversation_history: list[dict], new_question: str, document_context: str | None = None) -> str:
+def call_groq_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
     if not settings.groq_api_key:
         raise LLMError("GROQ_API_KEY is not configured.")
 
@@ -128,7 +144,7 @@ def call_groq_api(conversation_history: list[dict], new_question: str, document_
         if content:
             messages.append({"role": role, "content": content})
 
-    question = prepare_user_question(new_question, document_context)
+    question = prepare_user_question(new_question, document_context, subject)
     messages.append({"role": "user", "content": question})
 
     payload = {
@@ -160,7 +176,7 @@ def call_groq_api(conversation_history: list[dict], new_question: str, document_
         raise LLMError(f"Groq API network error: {str(e)}")
 
 
-def call_gemini_api(conversation_history: list[dict], new_question: str, document_context: str | None = None) -> str:
+def call_gemini_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
     if not settings.gemini_api_key:
         raise LLMError("GEMINI_API_KEY is not configured.")
 
@@ -182,7 +198,7 @@ def call_gemini_api(conversation_history: list[dict], new_question: str, documen
         if content:
             contents.append({"role": role, "parts": [{"text": content}]})
 
-    question = prepare_user_question(new_question, document_context)
+    question = prepare_user_question(new_question, document_context, subject)
     contents.append({"role": "user", "parts": [{"text": question}]})
 
     payload = {
@@ -225,7 +241,7 @@ def call_gemini_api(conversation_history: list[dict], new_question: str, documen
     raise LLMError(last_err or "Gemini API failed")
 
 
-def call_bedrock_api(conversation_history: list[dict], new_question: str, document_context: str | None = None) -> str:
+def call_bedrock_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
     messages = []
     last_role = None
 
@@ -241,7 +257,7 @@ def call_bedrock_api(conversation_history: list[dict], new_question: str, docume
         messages.append({"role": role, "content": [{"text": content}]})
         last_role = role
 
-    question = prepare_user_question(new_question, document_context)
+    question = prepare_user_question(new_question, document_context, subject)
 
     if last_role == "user" and messages:
         messages[-1]["content"][0]["text"] += f"\n{question}"
@@ -290,25 +306,25 @@ def call_bedrock_api(conversation_history: list[dict], new_question: str, docume
         raise LLMError(f"AWS Bedrock Exception: {str(last_exception or 'Unknown error')}")
 
 
-def get_llm_response(conversation_history: list[dict], new_question: str, document_context: str | None = None) -> str:
+def get_llm_response(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
     errors = []
 
     if settings.groq_api_key:
         try:
-            return call_groq_api(conversation_history, new_question, document_context)
+            return call_groq_api(conversation_history, new_question, document_context, subject)
         except Exception as e:
             print(f"Groq API failed: {e}")
             errors.append(str(e))
 
     if settings.gemini_api_key:
         try:
-            return call_gemini_api(conversation_history, new_question, document_context)
+            return call_gemini_api(conversation_history, new_question, document_context, subject)
         except Exception as e:
             print(f"Gemini API failed: {e}")
             errors.append(str(e))
 
     try:
-        return call_bedrock_api(conversation_history, new_question, document_context)
+        return call_bedrock_api(conversation_history, new_question, document_context, subject)
     except Exception as e:
         print(f"Bedrock API failed: {e}")
         errors.append(str(e))
@@ -317,19 +333,19 @@ def get_llm_response(conversation_history: list[dict], new_question: str, docume
     raise LLMError(f"Live AI APIs unavailable: {combined_err}")
 
 
-def stream_llm_response(conversation_history: list[dict], new_question: str, document_context: str | None = None) -> Generator[str, None, None]:
+def stream_llm_response(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> Generator[str, None, None]:
     """Generates SSE formatted string stream. Uses native Groq streaming when available, falls back to full response."""
 
     # --- Try native Groq streaming first ---
     if settings.groq_api_key:
         try:
-            yield from _stream_groq_native(conversation_history, new_question, document_context)
+            yield from _stream_groq_native(conversation_history, new_question, document_context, subject)
             return
         except Exception as e:
             print(f"Groq native stream failed, falling back: {e}")
 
     # --- Fallback: get full response from any provider then emit in chunks ---
-    full_response = get_llm_response(conversation_history, new_question, document_context)
+    full_response = get_llm_response(conversation_history, new_question, document_context, subject)
     words = full_response.split(" ")
     chunk_size = 3
     for i in range(0, len(words), chunk_size):
@@ -337,7 +353,7 @@ def stream_llm_response(conversation_history: list[dict], new_question: str, doc
         yield f"data: {json.dumps({'content': chunk_text})}\n\n"
 
 
-def _stream_groq_native(conversation_history: list[dict], new_question: str, document_context: str | None = None) -> Generator[str, None, None]:
+def _stream_groq_native(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> Generator[str, None, None]:
     """Native streaming from Groq API using chunked HTTP transfer."""
     if not settings.groq_api_key:
         raise LLMError("GROQ_API_KEY is not configured.")
@@ -351,7 +367,7 @@ def _stream_groq_native(conversation_history: list[dict], new_question: str, doc
         if content:
             messages.append({"role": role, "content": content})
 
-    question = prepare_user_question(new_question, document_context)
+    question = prepare_user_question(new_question, document_context, subject)
     messages.append({"role": "user", "content": question})
 
     payload = {

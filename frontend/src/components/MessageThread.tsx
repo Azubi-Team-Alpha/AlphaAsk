@@ -3,6 +3,8 @@ import type { Message, SubjectKey } from "../types";
 import { MessageRow } from "./MessageRow";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 import { Composer } from "./Composer";
+import { Download } from "lucide-react";
+import { exportSessionAsMarkdown } from "../lib/utils";
 
 interface AttachedFile {
   name: string;
@@ -41,6 +43,19 @@ export function MessageThread({
   return (
     <>
       <div className="aa-thread-inner">
+        {messages.length > 0 && (
+          <div style={{ display: "flex", justifyContent: "flex-end", padding: "4px 8px", marginBottom: 12 }}>
+            <button
+              className="aa-btn"
+              style={{ fontSize: 12, padding: "5px 12px", gap: 6 }}
+              onClick={() => exportSessionAsMarkdown(messages)}
+              title="Download full Q&A thread as a formatted Markdown Study Guide"
+            >
+              <Download size={14} style={{ color: "var(--aa-accent)" }} />
+              Export Study Guide (.md)
+            </button>
+          </div>
+        )}
         {messages.map((m, idx) => {
           const prevQuestion = idx > 0 && messages[idx - 1].role === "user" ? messages[idx - 1].content : undefined;
           return <MessageRow key={m.id} message={m} previousUserQuestion={prevQuestion} />;
