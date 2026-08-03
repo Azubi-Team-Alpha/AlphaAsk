@@ -35,8 +35,11 @@ resource "aws_lambda_function" "backend" {
   role          = aws_iam_role.lambda_exec.arn
   package_type  = "Image"
   image_uri     = "${aws_ecr_repository.backend.repository_url}:latest"
-  timeout       = 30
-  memory_size   = 512
+  # 60s Lambda timeout — gives cold start + API call room.
+  # API Gateway HTTP API hard-caps responses at 29s externally.
+  timeout = 60
+  # 1024MB = 2x CPU allocation vs 512MB, cuts cold start time ~50%
+  memory_size = 1024
 
   dynamic "vpc_config" {
     for_each = var.enable_vpc_lambda ? [1] : []
@@ -121,4 +124,31 @@ resource "aws_lambda_permission" "apigw_permission" {
   function_name = aws_lambda_function.backend.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
+}
+
+# ── Keep-Warm: ping /api/health every 5 minutes to prevent cold starts ──────
+resource "aws_cloudwatch_event_rule" "keep_warm" {
+  name                = "${var.app_name}-keep-warm"
+  description         = "Ping Lambda health endpoint every 5 min to prevent cold starts"
+  schedule_expression = "rate(5 minutes)"
+}
+
+resource "aws_cloudwatch_event_target" "keep_warm_lambda" {
+  rule      = aws_cloudwatch_event_rule.keep_warm.name
+  target_id = "AlphaAskKeepWarm"
+  arn       = aws_lambda_function.backend.arn
+
+  input = jsonencode({
+    requestContext = { http = { method = "GET", path = "/api/health" } }
+    rawPath        = "/api/health"
+    headers        = { "x-keep-warm" = "true" }
+  })
+}
+
+resource "aws_lambda_permission" "allow_eventbridge_keep_warm" {
+  statement_id  = "AllowEventBridgeKeepWarm"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.backend.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.keep_warm.arn
 }

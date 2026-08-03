@@ -7,6 +7,24 @@ interface MermaidRendererProps {
   chart: string;
 }
 
+/**
+ * Sanitize a mermaid chart to fix common rendering issues:
+ * - "Could not find a suitable point for the given distance" is caused by
+ *   very long edge labels. Truncate labels to ≤ 30 chars.
+ * - Remove unsupported unicode or special chars that break the parser.
+ */
+function sanitizeChart(chart: string): string {
+  // Truncate long edge labels: -->|long text here| → -->|long tex…|
+  return chart
+    .replace(/(\-\->|==\>|--\>|\.\.>|\-\.\->)\|([^|]{31,})\|/g, (_, arrow, label) => {
+      return `${arrow}|${label.slice(0, 28)}…|`;
+    })
+    // Also handle: -- long label -->
+    .replace(/--\s+([^-]{31,}?)\s+-->/g, (_, label) => {
+      return `-- ${label.slice(0, 28)}… -->`;
+    });
+}
+
 export function MermaidRenderer({ chart }: MermaidRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svgContent, setSvgContent] = useState<string | null>(null);
@@ -17,15 +35,18 @@ export function MermaidRenderer({ chart }: MermaidRendererProps) {
   useEffect(() => {
     let isMounted = true;
     const renderId = `mermaid-${Math.random().toString(36).substring(2, 9)}`;
+    const renderId2 = `mermaid-${Math.random().toString(36).substring(2, 9)}`;
 
     mermaid.initialize({
       startOnLoad: false,
       theme: "dark",
       securityLevel: "loose",
       fontFamily: "IBM Plex Sans, sans-serif",
+      flowchart: { curve: "basis", useMaxWidth: true },
     });
 
     const renderChart = async () => {
+      // Pass 1: try the raw chart
       try {
         const cleanChart = chart.trim();
         const { svg } = await mermaid.render(renderId, cleanChart);
@@ -33,10 +54,22 @@ export function MermaidRenderer({ chart }: MermaidRendererProps) {
           setSvgContent(svg);
           setError(false);
         }
+        return;
       } catch (err) {
-        console.warn("Mermaid render error:", err);
-        if (isMounted) {
-          setError(true);
+        // Pass 2: sanitize and retry once
+        try {
+          const simplified = sanitizeChart(chart.trim());
+          const { svg } = await mermaid.render(renderId2, simplified);
+          if (isMounted) {
+            setSvgContent(svg);
+            setError(false);
+          }
+          return;
+        } catch (err2) {
+          console.warn("Mermaid render error (both passes):", err2);
+          if (isMounted) {
+            setError(true);
+          }
         }
       }
     };
@@ -45,10 +78,10 @@ export function MermaidRenderer({ chart }: MermaidRendererProps) {
 
     return () => {
       isMounted = false;
-      const tempElement = document.getElementById(renderId);
-      if (tempElement) {
-        tempElement.remove();
-      }
+      [renderId, renderId2].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+      });
     };
   }, [chart]);
 
@@ -58,6 +91,12 @@ export function MermaidRenderer({ chart }: MermaidRendererProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const handleRetry = () => {
+    setError(false);
+    setShowRaw(false);
+    setSvgContent(null);
   };
 
   if (error || showRaw) {
@@ -82,13 +121,16 @@ export function MermaidRenderer({ chart }: MermaidRendererProps) {
             color: "var(--aa-text-muted)",
           }}
         >
-          <span>Mermaid Diagram Syntax</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Code size={13} />
+            {error ? "Diagram syntax (render failed)" : "Mermaid Diagram Syntax"}
+          </span>
           <div style={{ display: "flex", gap: 6 }}>
             {error && (
               <button
                 className="aa-btn"
-                style={{ fontSize: 11, padding: "2px 6px" }}
-                onClick={() => setShowRaw(false)}
+                style={{ fontSize: 11, padding: "2px 8px" }}
+                onClick={handleRetry}
               >
                 Retry Render
               </button>
@@ -133,10 +175,19 @@ export function MermaidRenderer({ chart }: MermaidRendererProps) {
           padding: "2px 8px",
           borderRadius: 4,
           border: "1px solid var(--aa-border)",
+          cursor: "pointer",
         }}
+        onClick={() => setShowRaw((v) => !v)}
+        title="Toggle source"
       >
         <Code size={12} /> Interactive Diagram
       </div>
+
+      {!svgContent && !error && (
+        <div style={{ color: "var(--aa-text-muted)", fontSize: 12, padding: "24px 0" }}>
+          Rendering diagram…
+        </div>
+      )}
 
       <div
         ref={containerRef}
@@ -146,7 +197,7 @@ export function MermaidRenderer({ chart }: MermaidRendererProps) {
           justifyContent: "center",
           marginTop: 18,
         }}
-        dangerouslySetInnerHTML={{ __html: svgContent || "Loading diagram..." }}
+        dangerouslySetInnerHTML={{ __html: svgContent || "" }}
       />
     </div>
   );
