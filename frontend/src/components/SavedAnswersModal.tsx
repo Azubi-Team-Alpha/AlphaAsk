@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Bookmark, Search, Copy, Check, Trash2 } from "lucide-react";
 import { copyToClipboard } from "../lib/utils";
+import { fetchQuestions, deleteQuestion } from "../lib/api";
 
 export interface SavedAnswer {
   id: string;
@@ -32,24 +33,52 @@ interface SavedAnswersModalProps {
 }
 
 export function SavedAnswersModal({ onClose }: SavedAnswersModalProps) {
-  const [savedAnswers, setSavedAnswers] = useState<SavedAnswer[]>(() => {
-    const saved = localStorage.getItem("alphaask_saved_answers");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return DEFAULT_SAVED_ANSWERS;
-      }
-    }
-    return DEFAULT_SAVED_ANSWERS;
-  });
-
+  const [savedAnswers, setSavedAnswers] = useState<SavedAnswer[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
-    localStorage.setItem("alphaask_saved_answers", JSON.stringify(savedAnswers));
-  }, [savedAnswers]);
+    let isMounted = true;
+    const loadBackendQuestions = async () => {
+      try {
+        const backendItems = await fetchQuestions();
+        if (isMounted && backendItems && backendItems.length > 0) {
+          const mapped: SavedAnswer[] = backendItems.map((q) => ({
+            id: q.id,
+            question: q.question,
+            answer: q.answer,
+            savedAt: new Date(q.created_at || Date.now()).getTime(),
+          }));
+          setSavedAnswers(mapped);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // Fallback to local storage if offline/unauthenticated
+      }
+
+      if (isMounted) {
+        const saved = localStorage.getItem("alphaask_saved_answers");
+        if (saved) {
+          try {
+            setSavedAnswers(JSON.parse(saved));
+          } catch {
+            setSavedAnswers(DEFAULT_SAVED_ANSWERS);
+          }
+        } else {
+          setSavedAnswers(DEFAULT_SAVED_ANSWERS);
+        }
+        setLoading(false);
+      }
+    };
+
+    loadBackendQuestions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleCopy = async (id: string, text: string) => {
     const ok = await copyToClipboard(text);
@@ -59,8 +88,13 @@ export function SavedAnswersModal({ onClose }: SavedAnswersModalProps) {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     setSavedAnswers((prev) => prev.filter((item) => item.id !== id));
+    try {
+      await deleteQuestion(id);
+    } catch {
+      // Local removal completed
+    }
   };
 
   const filtered = savedAnswers.filter(
@@ -102,7 +136,16 @@ export function SavedAnswersModal({ onClose }: SavedAnswersModalProps) {
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", paddingRight: 4, display: "flex", flexDirection: "column", gap: 12 }}>
-          {filtered.map((item) => (
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "40px 0", color: "var(--aa-text-muted)", fontSize: 13 }}>
+              Loading saved answers from backend...
+            </div>
+          ) : filtered.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 0", color: "var(--aa-text-muted)", fontSize: 13 }}>
+              No saved answers found.
+            </div>
+          ) : (
+            filtered.map((item) => (
             <div
               key={item.id}
               style={{
@@ -157,13 +200,7 @@ export function SavedAnswersModal({ onClose }: SavedAnswersModalProps) {
                 )}
               </div>
             </div>
-          ))}
-
-          {filtered.length === 0 && (
-            <div style={{ textAlign: "center", padding: 30, color: "var(--aa-text-muted)", fontSize: 13 }}>
-              {search ? `No saved answers match "${search}".` : "No saved answers yet. Click the bookmark icon on any AI answer to save it here."}
-            </div>
-          )}
+          )))}
         </div>
       </div>
     </div>

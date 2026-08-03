@@ -7,6 +7,8 @@ import { saveAnswerToLocalStorage, copyToClipboard } from "../lib/utils";
 import { FlashcardModal } from "./FlashcardModal";
 import { CitationModal } from "./CitationModal";
 
+import { MermaidRenderer } from "./MermaidRenderer";
+
 interface MessageRowProps {
   message: Message;
   previousUserQuestion?: string;
@@ -49,7 +51,24 @@ export function MessageRow({ message, previousUserQuestion }: MessageRowProps) {
         <div className="aa-assistant-mark">α</div>
         <div className="aa-assistant-body">
           <div className="aa-assistant-text">
-            <ReactMarkdown>{message.content}</ReactMarkdown>
+            <ReactMarkdown
+              components={{
+                code({ inline, className, children, ...props }: any) {
+                  const match = /language-(\w+)/.exec(className || "");
+                  const lang = match ? match[1] : "";
+                  if (!inline && lang === "mermaid") {
+                    return <MermaidRenderer chart={String(children).replace(/\n$/, "")} />;
+                  }
+                  return (
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  );
+                },
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
           </div>
           {message.annotations && message.annotations.length > 0 && (
             <div className="aa-margin">

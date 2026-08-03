@@ -95,6 +95,7 @@ export default function AlphaAskApp() {
           isAuthenticated={auth.isAuthenticated}
           onLoginClick={() => auth.setAuthModalMode("login")}
           onSignUpClick={() => auth.setAuthModalMode("signup")}
+          onFAQClick={() => setShowFAQ(true)}
         />
 
         <div className="aa-thread" ref={scrollRef}>
@@ -130,6 +131,7 @@ export default function AlphaAskApp() {
               onAttachFile={chat.handleAttachFile}
               onRemoveFile={chat.handleRemoveFile}
               isAuthenticated={auth.isAuthenticated}
+              onSignUpClick={() => auth.setAuthModalMode("signup")}
             />
           )}
         </div>

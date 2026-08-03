@@ -1,4 +1,4 @@
-import { LogIn, Moon, PanelLeft, Sun, UserPlus } from "lucide-react";
+import { HelpCircle, LogIn, Moon, PanelLeft, Sun, UserPlus } from "lucide-react";
 import type { ThemeMode } from "../types";
 import { PomodoroTimer } from "./PomodoroTimer";
 
@@ -10,6 +10,7 @@ interface TopBarProps {
   isAuthenticated: boolean;
   onLoginClick: () => void;
   onSignUpClick: () => void;
+  onFAQClick?: () => void;
 }
 
 export function TopBar({
@@ -20,6 +21,7 @@ export function TopBar({
   isAuthenticated,
   onLoginClick,
   onSignUpClick,
+  onFAQClick,
 }: TopBarProps) {
   return (
     <div className="aa-topbar">
@@ -33,6 +35,18 @@ export function TopBar({
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <PomodoroTimer />
+
+        {onFAQClick && (
+          <button
+            className="aa-btn"
+            style={{ fontSize: 12, padding: "4px 10px", gap: 5 }}
+            onClick={onFAQClick}
+            title="Browse Student FAQ Knowledgebase"
+          >
+            <HelpCircle size={14} style={{ color: "var(--aa-accent)" }} />
+            FAQ Knowledgebase
+          </button>
+        )}
 
         <button className="aa-theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
           {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}

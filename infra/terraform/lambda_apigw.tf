@@ -58,6 +58,7 @@ resource "aws_lambda_function" "backend" {
       REDIS_URL        = "redis://${aws_elasticache_cluster.redis.cache_nodes.0.address}:6379"
       GEMINI_API_KEY   = var.gemini_api_key
       GROQ_API_KEY     = var.groq_api_key
+      OPENROUTER_API_KEY = var.openrouter_api_key
     }
   }
 

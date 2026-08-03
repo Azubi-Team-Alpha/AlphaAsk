@@ -49,6 +49,13 @@ variable "groq_api_key" {
   default     = ""
 }
 
+variable "openrouter_api_key" {
+  description = "OpenRouter API key providing access to 400+ LLM models"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "domain_name" {
   description = "Custom domain name matching Cloudflare CNAME and S3 static website bucket name"
   type        = string

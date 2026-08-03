@@ -16,12 +16,14 @@ class Settings(BaseSettings):
     # JWT — must be set via JWT_SECRET_KEY env var (no insecure default)
     jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
-    jwt_expire_minutes: int = 60
+    jwt_expire_minutes: int = 480  # 8 hours — students don't get logged out mid-study session
 
     # AWS / Bedrock
     bedrock_model_id: str = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
 
-    # External Fallback AI Keys
+    # External AI Keys & OpenRouter Integration
+    openrouter_api_key: str = ""
+    openrouter_model_id: str = "openai/gpt-4o-mini"
     gemini_api_key: str = ""
     groq_api_key: str = ""
 
