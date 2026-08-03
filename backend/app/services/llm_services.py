@@ -131,6 +131,61 @@ def prepare_user_question(new_question: str, document_context: str | None = None
     return "\n\n".join(parts)
 
 
+DISCIPLINE_MODEL_ROUTING = {
+    "math": [
+        "deepseek/deepseek-r1",
+        "openai/gpt-4o",
+        "meta-llama/llama-3.3-70b-instruct",
+        "openai/gpt-4o-mini",
+    ],
+    "writing": [
+        "anthropic/claude-3.5-sonnet",
+        "openai/gpt-4o",
+        "google/gemini-2.0-flash-001",
+        "openai/gpt-4o-mini",
+    ],
+    "code": [
+        "qwen/qwen-2.5-coder-32b-instruct",
+        "meta-llama/llama-3.3-70b-instruct",
+        "deepseek/deepseek-r1",
+        "openai/gpt-4o-mini",
+    ],
+    "science": [
+        "google/gemini-2.0-flash-001",
+        "deepseek/deepseek-r1",
+        "anthropic/claude-3.5-sonnet",
+        "openai/gpt-4o-mini",
+    ],
+    "history": [
+        "anthropic/claude-3.5-sonnet",
+        "openai/gpt-4o",
+        "meta-llama/llama-3.3-70b-instruct",
+        "openai/gpt-4o-mini",
+    ],
+    "study": [
+        "openai/gpt-4o-mini",
+        "google/gemini-2.0-flash-001",
+        "meta-llama/llama-3.3-70b-instruct",
+    ],
+}
+
+
+def get_openrouter_models_for_subject(subject: str | None = None) -> list[str]:
+    sub = (subject or "").lower().strip()
+    preferred = DISCIPLINE_MODEL_ROUTING.get(sub, [])
+    baseline = [
+        settings.openrouter_model_id,
+        "openai/gpt-4o-mini",
+        "google/gemini-2.0-flash-001",
+        "meta-llama/llama-3.3-70b-instruct",
+        "anthropic/claude-3.5-sonnet",
+        "deepseek/deepseek-r1",
+    ]
+    combined = preferred + baseline
+    seen = set()
+    return [m for m in combined if m and not (m in seen or seen.add(m))]
+
+
 def call_openrouter_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
     if not settings.openrouter_api_key:
         raise LLMError("OPENROUTER_API_KEY is not configured.")
@@ -147,16 +202,7 @@ def call_openrouter_api(conversation_history: list[dict], new_question: str, doc
     question = prepare_user_question(new_question, document_context, subject)
     messages.append({"role": "user", "content": question})
 
-    models = [
-        settings.openrouter_model_id,
-        "openai/gpt-4o-mini",
-        "google/gemini-2.0-flash-001",
-        "meta-llama/llama-3.3-70b-instruct",
-        "anthropic/claude-3.5-sonnet",
-        "deepseek/deepseek-r1",
-    ]
-    seen = set()
-    model_list = [m for m in models if m and not (m in seen or seen.add(m))]
+    model_list = get_openrouter_models_for_subject(subject)
 
     last_err = None
     for model in model_list:
@@ -214,8 +260,11 @@ def _stream_openrouter_native(conversation_history: list[dict], new_question: st
     question = prepare_user_question(new_question, document_context, subject)
     messages.append({"role": "user", "content": question})
 
+    model_list = get_openrouter_models_for_subject(subject)
+    target_model = model_list[0]
+
     payload = {
-        "model": settings.openrouter_model_id or "openai/gpt-4o-mini",
+        "model": target_model,
         "messages": messages,
         "temperature": 0.3,
         "max_tokens": 4096,
