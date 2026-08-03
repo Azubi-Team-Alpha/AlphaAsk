@@ -48,16 +48,16 @@ resource "aws_lambda_function" "backend" {
 
   environment {
     variables = {
-      USERS_TABLE      = aws_dynamodb_table.users.name
-      SESSIONS_TABLE   = aws_dynamodb_table.sessions.name
-      MESSAGES_TABLE   = aws_dynamodb_table.messages.name
-      QUESTIONS_TABLE  = aws_dynamodb_table.questions.name
-      FAQ_TABLE        = aws_dynamodb_table.faq.name
-      JWT_SECRET_KEY   = var.jwt_secret_key
-      BEDROCK_MODEL_ID = var.bedrock_model_id
-      REDIS_URL        = "redis://${aws_elasticache_cluster.redis.cache_nodes.0.address}:6379"
-      GEMINI_API_KEY   = var.gemini_api_key
-      GROQ_API_KEY     = var.groq_api_key
+      USERS_TABLE        = aws_dynamodb_table.users.name
+      SESSIONS_TABLE     = aws_dynamodb_table.sessions.name
+      MESSAGES_TABLE     = aws_dynamodb_table.messages.name
+      QUESTIONS_TABLE    = aws_dynamodb_table.questions.name
+      FAQ_TABLE          = aws_dynamodb_table.faq.name
+      JWT_SECRET_KEY     = var.jwt_secret_key
+      BEDROCK_MODEL_ID   = var.bedrock_model_id
+      REDIS_URL          = "redis://${aws_elasticache_cluster.redis.cache_nodes.0.address}:6379"
+      GEMINI_API_KEY     = var.gemini_api_key
+      GROQ_API_KEY       = var.groq_api_key
       OPENROUTER_API_KEY = var.openrouter_api_key
     }
   }
