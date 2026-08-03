@@ -221,7 +221,10 @@ jobs:
               terraform import -lock=false aws_apigatewayv2_route.default_route $API_ID/$DEF_ROUTE_ID
             fi
           fi
-          terraform import -lock=false aws_lambda_permission.apigw_permission alphaask-backend/AllowExecutionFromAPIGateway
+          terraform import -lock=false aws_lambda_permission.apigw_permission alphaask-backend/AllowExecutionFromAPIGateway || true
+          terraform import -lock=false aws_cloudwatch_event_rule.keep_warm alphaask-keep-warm || true
+          terraform import -lock=false aws_cloudwatch_event_target.keep_warm_lambda alphaask-keep-warm/AlphaAskKeepWarm || true
+          terraform import -lock=false aws_lambda_permission.allow_eventbridge_keep_warm alphaask-backend/AllowEventBridgeKeepWarm || true
 
           set -e
 
