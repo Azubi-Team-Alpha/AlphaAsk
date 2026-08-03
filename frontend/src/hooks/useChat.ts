@@ -120,6 +120,7 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
         question,
         sid,
         docContext,
+        subject,
         (textSoFar) => {
           setMessages((prev) =>
             prev.map((msg) =>
