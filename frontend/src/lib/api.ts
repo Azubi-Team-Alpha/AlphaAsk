@@ -183,12 +183,23 @@ export async function fetchConversations(): Promise<Conversation[]> {
     const res = await fetch(`${API_BASE}/api/conversations`, { headers: getHeaders() });
     if (!res.ok) return [];
     const data = await res.json();
-    return data.map((c: any) => ({
-      id: c.id,
-      title: c.title || "Academic Question",
-      updatedAt: c.updatedAt || Date.now(),
-      messages: [],
-    }));
+    const convos = data.map((c: any) => {
+      let ts = Date.now();
+      if (typeof c.updatedAt === "number") {
+        ts = c.updatedAt;
+      } else if (typeof c.updatedAt === "string" && c.updatedAt) {
+        const parsed = new Date(c.updatedAt).getTime();
+        if (!isNaN(parsed)) ts = parsed;
+      }
+      return {
+        id: c.id,
+        title: c.title || "Academic Question",
+        updatedAt: ts,
+        messages: [],
+      };
+    });
+    convos.sort((a: Conversation, b: Conversation) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    return convos;
   } catch {
     return [];
   }

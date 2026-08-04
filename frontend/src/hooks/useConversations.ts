@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchConversations } from "../lib/api-mock";
+import { fetchConversations } from "../lib/api";
 import type { Conversation } from "../types";
 
 export function useConversations(isAuthenticated: boolean) {
@@ -13,7 +13,10 @@ export function useConversations(isAuthenticated: boolean) {
     let cancelled = false;
 
     fetchConversations().then((data) => {
-      if (!cancelled) setConversations(data);
+      if (!cancelled) {
+        const sorted = [...data].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        setConversations(sorted);
+      }
     });
 
     return () => {
@@ -23,9 +26,11 @@ export function useConversations(isAuthenticated: boolean) {
 
   const filteredConversations = useMemo(
     () =>
-      conversations.filter((c) =>
-        c.title.toLowerCase().includes(search.toLowerCase())
-      ),
+      conversations
+        .filter((c) =>
+          c.title.toLowerCase().includes(search.toLowerCase())
+        )
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)),
     [conversations, search]
   );
 
