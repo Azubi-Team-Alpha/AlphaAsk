@@ -1,13 +1,13 @@
 # AlphaAsk — AI-Powered Student Support Platform
 
-**AlphaAsk** is an enterprise-grade, fully serverless AI academic support platform designed for university students. The application features a modern decoupled architecture comprising a React single-page application (SPA), a FastAPI Python backend, AWS DynamoDB NoSQL persistence, ElastiCache Redis rate-limiting, and an automated multi-provider LLM failover engine (**AWS Bedrock Claude 3.5 Sonnet**, **Groq Llama-3.3 70B**, and **Google Gemini 2.5/2.0/1.5 Flash**).
+**AlphaAsk** is an enterprise-grade, fully serverless AI academic support platform designed for university students. The application features a modern decoupled architecture comprising a React 19 single-page application (SPA), Cloudflare DNS & Security, AWS CloudFront CDN, a FastAPI Python backend hosted on AWS Lambda, AWS DynamoDB NoSQL persistence, ElastiCache Redis rate-limiting, Document RAG Context Processing, and an automated 4-provider LLM failover engine (**AWS Bedrock Claude 3.5 Sonnet**, **Groq Llama-3.3 70B**, **Google Gemini 2.5/2.0/1.5 Flash**, and **OpenRouter API** with DeepSeek-R1, GPT-4o, and Qwen-Coder).
 
 ---
 
 ## 1. System Architecture
 
-![AlphaPay AWS Architecture Diagram](docs/architecture-diagram.png)
-
+- **Draw.io Diagram File**: [docs/alphaask-architecture.drawio](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/alphaask-architecture.drawio)
+- **Architecture Overview**: [docs/SYSTEM_ARCHITECTURE_AND_WORKFLOW.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/SYSTEM_ARCHITECTURE_AND_WORKFLOW.md)
 
 ---
 
@@ -15,10 +15,12 @@
 
 - **Frontend**: React 19, TypeScript, Vite, Lucide Icons, Modern Vanilla CSS Design Tokens.
 - **Backend API**: Python 3.12, FastAPI, Uvicorn, Mangum (ASGI Serverless Adapter).
-- **AI Orchestration Engine**: Multi-Provider Failover & Streaming:
+- **DNS & Edge Security**: Cloudflare DNS & WAF (`alphaask.alphateam.live`), AWS CloudFront CDN.
+- **AI Orchestration Engine**: 4-Provider Failover, Real-time SSE Streaming & RAG Grounding:
   1. **AWS Bedrock** (`us.anthropic.claude-3-5-sonnet-20241022-v2:0`)
   2. **Groq Cloud API** (`llama-3.3-70b-versatile` with native SSE streaming)
   3. **Google Gemini API** (`gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`)
+  4. **OpenRouter API** (`deepseek/deepseek-r1`, `openai/gpt-4o`, `qwen/qwen-2.5-coder-32b-instruct`)
 - **Database**: Amazon DynamoDB (5 On-Demand NoSQL Tables: `Users`, `Sessions`, `Messages`, `Questions` with `UserQuestionsIndex` GSI, and `FAQ`).
 - **Authentication**: JWT (JSON Web Tokens via `python-jose`) and `bcrypt` password hashing via `passlib`.
 - **Cache / Rate Limiting**: Amazon ElastiCache for Redis with graceful fallback.
@@ -30,12 +32,12 @@
 
 ## 3. Platform Capabilities & Features
 
-- **Interactive Academic Assistant**: Natural language Q&A for student inquiries across multiple subjects (Math, Science, Writing, Code, History, and Study Skills).
+- **Interactive Academic Assistant**: Natural language Q&A for student inquiries across multiple subject personas (Math, Science, Writing, Code, History, and Study Skills).
+- **Strict RAG Grounding Mode**: Document & PDF processing with intelligent chunking (`chunk_and_retrieve_context`), strict document grounding mode (`rag_mode`), citation of section headers/page numbers, and standardized ungrounded fallback responses.
 - **Real-Time Streaming Responses**: Live token-by-token streaming responses via Server-Sent Events (`/api/ask/stream`).
-- **Multi-Provider LLM Resilience**: Automatic failover cascade ensuring continuous service availability across AWS Bedrock, Groq, and Google Gemini APIs.
+- **4-Provider LLM Resilience Engine**: Automatic failover cascade ensuring continuous service availability across AWS Bedrock, Groq, Google Gemini, and OpenRouter APIs.
 - **Secure Auth & Session Persistence**: Student user registration, encrypted credentials, JWT tokens, and multi-session conversation tracking.
 - **Optimized Question Indexing**: Direct O(1) user question history retrieval powered by DynamoDB Global Secondary Indexing (`UserQuestionsIndex`).
-- **Document Context Support**: Capability to attach text and document context to questions for targeted academic support.
 - **Saved Answers & Bookmarks**: Response bookmarking, subject taxonomy filtering, and quick copy-to-clipboard tools.
 
 ---

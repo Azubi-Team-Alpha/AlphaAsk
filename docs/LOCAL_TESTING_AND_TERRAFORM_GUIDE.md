@@ -7,14 +7,15 @@ This document provides complete, step-by-step instructions to provision the AWS 
 ## 1. Architecture Overview
 
 ```
-[ React Frontend (Vite) ]  ───►  [ Amazon API Gateway (HTTP API) ]
-                                            │
-                                            ▼
-                               [ AWS Lambda Container (FastAPI) ]
-                                 │            │           │
-                                 ▼            ▼           ▼
-                           [ DynamoDB ]   [ Redis ]  [ Multi-LLM Orchestrator ]
-                           (5 Tables)     (Cache)    (Groq, Gemini, Bedrock)
+[ Student Clients ] ──► [ Cloudflare DNS/WAF ] ──► [ CloudFront CDN ] ──► [ API Gateway ]
+                                                                             │
+                                                                             ▼
+                                                                [ AWS Lambda (FastAPI) ]
+                                                                 │          │          │
+                                                                 ▼          ▼          ▼
+                                                            [DynamoDB]  [Redis]  [4-LLM Orchestrator]
+                                                            (5 Tables)  (Cache)  (Bedrock, Groq,
+                                                                                  Gemini, OpenRouter)
 ```
 
 ---
