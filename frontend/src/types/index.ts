@@ -65,4 +65,7 @@ export interface AttachedFile {
   content: string;
   sizeFormatted?: string;
   fileType?: string;
+  status?: "parsing" | "ready" | "error";
+  wordCount?: number;
+  extractedText?: string;
 }

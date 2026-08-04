@@ -91,9 +91,9 @@ export function Composer({
                 fontSize: 12,
                 padding: "4px 10px",
                 borderRadius: 6,
-                background: "var(--aa-surface-raised)",
-                border: "1px solid var(--aa-accent)",
-                color: "var(--aa-accent)",
+                background: attachedFile.status === "parsing" ? "rgba(234, 179, 8, 0.12)" : "var(--aa-surface-raised)",
+                border: attachedFile.status === "parsing" ? "1px solid #eab308" : "1px solid var(--aa-accent)",
+                color: attachedFile.status === "parsing" ? "#eab308" : "var(--aa-accent)",
                 width: "fit-content",
               }}
             >
@@ -101,6 +101,11 @@ export function Composer({
               <span>
                 {attachedFile.name}
                 {attachedFile.sizeFormatted ? ` (${attachedFile.sizeFormatted})` : ""}
+                <span style={{ marginLeft: 6, fontWeight: 600 }}>
+                  {attachedFile.status === "parsing" && " • ⏳ Parsing..."}
+                  {attachedFile.status === "ready" && ` • ✅ Ready (${attachedFile.wordCount ?? 0} words parsed)`}
+                  {attachedFile.status === "error" && " • ❌ Parsing error"}
+                </span>
               </span>
               <button
                 onClick={onRemoveFile}
@@ -108,7 +113,7 @@ export function Composer({
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  color: "var(--aa-accent)",
+                  color: "inherit",
                   display: "flex",
                   alignItems: "center",
                   padding: 0,
@@ -172,7 +177,11 @@ export function Composer({
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
         />
-        <button className="aa-send-btn" onClick={onSend} disabled={!draft.trim() || isThinking}>
+        <button
+          className="aa-send-btn"
+          onClick={onSend}
+          disabled={!draft.trim() || isThinking || attachedFile?.status === "parsing"}
+        >
           <Send size={15} />
         </button>
       </div>

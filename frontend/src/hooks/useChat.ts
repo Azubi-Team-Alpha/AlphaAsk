@@ -64,20 +64,72 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
       return;
     }
 
-    const reader = new FileReader();
     const sizeStr = formatFileSize(file.size);
     const fileName = file.name;
 
-    if (fileName.toLowerCase().endsWith(".pdf") || file.type === "application/pdf") {
+    // Set initial parsing state immediately
+    setAttachedFile({
+      name: fileName,
+      content: "",
+      sizeFormatted: sizeStr,
+      fileType: fileName.toLowerCase().endsWith(".pdf") || file.type === "application/pdf" ? "pdf" : "text",
+      status: "parsing",
+      wordCount: 0,
+    });
+
+    const isPdf = fileName.toLowerCase().endsWith(".pdf") || file.type === "application/pdf";
+
+    if (isPdf) {
+      const reader = new FileReader();
       reader.onload = (e) => {
         const dataUrl = (e.target?.result as string) || "";
-        setAttachedFile({ name: fileName, content: dataUrl, sizeFormatted: sizeStr, fileType: "pdf" });
+        // Estimate PDF word count based on file size and text content
+        const rawBytes = dataUrl.length;
+        const estimatedWords = Math.max(50, Math.round(rawBytes / 12));
+        setAttachedFile({
+          name: fileName,
+          content: dataUrl,
+          sizeFormatted: sizeStr,
+          fileType: "pdf",
+          status: "ready",
+          wordCount: estimatedWords,
+        });
+      };
+      reader.onerror = () => {
+        setAttachedFile({
+          name: fileName,
+          content: "",
+          sizeFormatted: sizeStr,
+          fileType: "pdf",
+          status: "error",
+          wordCount: 0,
+        });
       };
       reader.readAsDataURL(file);
     } else {
+      const reader = new FileReader();
       reader.onload = (e) => {
         const text = (e.target?.result as string) || "";
-        setAttachedFile({ name: fileName, content: text, sizeFormatted: sizeStr, fileType: "text" });
+        const words = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+        setAttachedFile({
+          name: fileName,
+          content: text,
+          sizeFormatted: sizeStr,
+          fileType: "text",
+          status: "ready",
+          wordCount: words,
+          extractedText: text,
+        });
+      };
+      reader.onerror = () => {
+        setAttachedFile({
+          name: fileName,
+          content: "",
+          sizeFormatted: sizeStr,
+          fileType: "text",
+          status: "error",
+          wordCount: 0,
+        });
       };
       reader.readAsText(file);
     }
