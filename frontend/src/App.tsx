@@ -182,12 +182,14 @@ async function callAuth(payload: AuthPayload): Promise<CurrentUser> {
 
 async function fetchConversations(): Promise<Conversation[]> {
   const items = await apiRequest<{ id: string; title: string; updatedAt: string | number }[]>("/api/conversations");
-  return items.map((c) => ({
-    id: c.id,
-    title: c.title,
-    updatedAt: typeof c.updatedAt === "string" ? new Date(c.updatedAt).getTime() : c.updatedAt,
-    messages: [],
-  }));
+  return items
+    .map((c) => ({
+      id: c.id,
+      title: c.title,
+      updatedAt: typeof c.updatedAt === "string" ? new Date(c.updatedAt).getTime() : c.updatedAt || Date.now(),
+      messages: [],
+    }))
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 }
 
 async function createSession(): Promise<string> {

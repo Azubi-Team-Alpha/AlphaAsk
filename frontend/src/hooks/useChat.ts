@@ -203,19 +203,29 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
       if (isAuthenticated) {
         setConversations((prev) => {
           const title = question.slice(0, 48) + (question.length > 48 ? "…" : "");
-          if (activeId) {
-            return prev.map((c) =>
-              c.id === activeId ? { ...c, title, updatedAt: Date.now() } : c
-            );
+          const targetId = activeId || sid!;
+          const now = Date.now();
+          const existingIndex = prev.findIndex((c) => c.id === targetId);
+          let updatedList: Conversation[];
+          if (existingIndex >= 0) {
+            const existing = prev[existingIndex];
+            const updatedItem: Conversation = {
+              ...existing,
+              title: existing.title && existing.title !== "Academic Question" ? existing.title : title,
+              updatedAt: now,
+            };
+            updatedList = [updatedItem, ...prev.filter((_, idx) => idx !== existingIndex)];
+          } else {
+            const newConvo: Conversation = {
+              id: targetId,
+              title,
+              updatedAt: now,
+              messages: [],
+            };
+            updatedList = [newConvo, ...prev];
           }
-          const newConvo: Conversation = {
-            id: sid!,
-            title,
-            updatedAt: Date.now(),
-            messages: [],
-          };
-          setActiveId(sid!);
-          return [newConvo, ...prev];
+          if (!activeId) setActiveId(targetId);
+          return updatedList.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
         });
       }
     } catch (err) {
