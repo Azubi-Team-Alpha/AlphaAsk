@@ -6,7 +6,7 @@
 
 ## 1. System Architecture
 
-- **Draw.io Diagram File**: [docs/alphaask-architecture.drawio](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/alphaask-architecture.drawio)
+- **Draw.io Diagram File**: [docs/alphaask-architecture.drawio.png](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/alphaask-architecture.drawio.png)
 - **Architecture Overview**: [docs/SYSTEM_ARCHITECTURE_AND_WORKFLOW.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/SYSTEM_ARCHITECTURE_AND_WORKFLOW.md)
 
 ---

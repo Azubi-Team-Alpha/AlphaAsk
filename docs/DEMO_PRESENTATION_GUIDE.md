@@ -57,6 +57,12 @@ This guide provides a comprehensive, turn-by-turn presentation script, live demo
                                        │ HTTPS / JSON / SSE
                                        ▼
                   ┌─────────────────────────────────────────┐
+                  │          Cloudflare DNS & WAF           │
+                  │        (alphaask.alphateam.live)        │
+                  └────────────────────┬────────────────────┘
+                                       │ HTTPS / Edge CDN
+                                       ▼
+                  ┌─────────────────────────────────────────┐
                   │      Amazon API Gateway (HTTP API v2)   │
                   │            ANY /{proxy+}                │
                   └────────────────────┬────────────────────┘
@@ -70,28 +76,29 @@ This guide provides a comprehensive, turn-by-turn presentation script, live demo
         ┌─────────────────┘             │             └─────────────────┐
         ▼                               ▼                               ▼
 ┌──────────────┐                 ┌──────────────┐                ┌──────────────┐
-│  DynamoDB    │                 │ ElastiCache  │                │ Multi-LLM    │
+│  DynamoDB    │                 │ ElastiCache  │                │ 4-LLM Engine │
 │ Persistence  │                 │ Redis Cache  │                │ Orchestrator │
-│  (5 Tables)  │                 │ Rate Limiter │                │ Failover Engine
+│  (5 Tables)  │                 │ Rate Limiter │                │ Failover     │
 └──────────────┘                 └──────────────┘                └──────┬───────┘
                                                                         │
-                                       ┌────────────────────────────────┼────────────────────────────────┐
-                                       ▼                                ▼                                ▼
-                                ┌──────────────┐                 ┌──────────────┐                 ┌──────────────┐
-                                │  Groq Cloud  │                 │Google Gemini │                 │ AWS Bedrock  │
-                                │ (Llama-3.3   │                 │ (Flash 3.6 / │                 │ (Claude 3.5  │
-                                │  70B SSE)    │                 │  3.5 / 2.0)  │                 │ Sonnet v2)   │
-                                └──────────────┘                 └──────────────┘                 └──────────────┘
+        ┌───────────────────────────────┬───────────────────────────────┼───────────────────────────────┐
+        ▼                               ▼                               ▼                               ▼
+ ┌──────────────┐                ┌──────────────┐                ┌──────────────┐                ┌──────────────┐
+ │ AWS Bedrock  │                │  Groq Cloud  │                │Google Gemini │                │  OpenRouter  │
+ │ (Claude 3.5) │                │ (Llama-3.3   │                │ (Flash 2.5)  │                │ (DeepSeek/   │
+ │              │                │  70B SSE)    │                │              │                │  GPT-4o)     │
+ └──────────────┘                └──────────────┘                └──────────────┘                └──────────────┘
 ```
 
 > **Speaker Notes**:  
-> *"Our architecture relies on 5 core pillars:*  
+> *"Our architecture relies on 6 core engineering pillars:*  
 >  
-> 1. **Amazon API Gateway (HTTP API v2)**: Provides public HTTPS endpoints with automated CORS handling, routing requests to AWS Lambda.  
-> 2. **AWS Lambda (Containerized)**: Runs our Python 3.12 FastAPI backend packaged as an OCI Docker container image stored in **Amazon Elastic Container Registry (ECR)** and managed by the `Mangum` ASGI adapter.  
-> 3. **Amazon DynamoDB**: Stores application data across 5 on-demand NoSQL tables (`Users`, `Sessions`, `Messages`, `Questions` with `UserQuestionsIndex` GSI, and `FAQ`).  
-> 4. **Amazon ElastiCache Redis**: Enforces sliding-window rate-limiting to protect backend resources and downstream APIs against abuse.  
-> 5. **Multi-Provider AI Resilience Engine**: Cascades from **Groq** (Llama 3.3 70B) $\rightarrow$ **Google Gemini** (Flash 3.6/3.5/2.0) $\rightarrow$ **AWS Bedrock** (Claude 3.5 Sonnet v2) for 99.99% uptime."*
+> 1. **Cloudflare DNS & Edge Security**: Provides global DNS resolution and web application firewall security (`alphaask.alphateam.live`).  
+> 2. **Amazon API Gateway (HTTP API v2)**: Delivers public HTTPS endpoints with automated CORS handling, proxying requests to AWS Lambda.  
+> 3. **AWS Lambda (Containerized)**: Runs our Python 3.12 FastAPI backend packaged as an OCI Docker container image stored in **Amazon Elastic Container Registry (ECR)** and managed serverlessly by the `Mangum` ASGI adapter.  
+> 4. **Amazon DynamoDB**: Stores application persistence across 5 on-demand NoSQL tables (`Users`, `Sessions`, `Messages`, `Questions` with `UserQuestionsIndex` GSI, and `FAQ`).  
+> 5. **Amazon ElastiCache Redis**: Enforces sliding-window rate-limiting to protect backend resources and downstream APIs against traffic bursts.  
+> 6. **4-Provider AI Resilience Engine**: Cascades across **AWS Bedrock** (Claude 3.5 Sonnet) $\rightarrow$ **Groq Cloud API** (Llama 3.3 70B SSE) $\rightarrow$ **Google Gemini API** (Flash 2.5/2.0) $\rightarrow$ **OpenRouter API** (DeepSeek-R1, GPT-4o, Qwen-Coder) for 99.99% uptime and specialized discipline model routing."*
 
 ---
 
