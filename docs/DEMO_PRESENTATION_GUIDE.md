@@ -175,7 +175,7 @@ We have achieved **100% compliance** with all requirements specified by Azubi Af
 | **Amazon API Gateway** | HTTP API v2 instance routing public requests via `ANY /{proxy+}` to Lambda | ✅ **100% Compliant** |
 | **AWS Lambda (Serverless Compute)** | FastAPI ASGI backend running on AWS Lambda with container support via Amazon ECR | ✅ **100% Compliant** |
 | **Amazon DynamoDB Storage** | 5 On-Demand NoSQL tables (`Users`, `Sessions`, `Messages`, `Questions`, `FAQ`) | ✅ **100% Compliant** |
-| **AI Service Integration** | Multi-Provider Failover: Groq (Llama-3.3 70B), Gemini Flash (3.6/3.5/2.0), Bedrock (Claude 3.5) | ✅ **100% Compliant** |
+| **AI Service Integration** | 4-Provider Failover: AWS Bedrock (`Claude 3.5`), Groq (`Llama-3.3 70B`), Gemini (`Flash 2.5`), OpenRouter (`DeepSeek-R1`, `GPT-4o`, `Qwen-Coder`) | ✅ **100% Compliant** |
 | **CI/CD Automation Pipeline** | 4-Stage GitHub Actions workflow (`.github/workflows/deploy.yml`) for automated lint, test & deploy | ✅ **100% Compliant** |
 | **Agile & Task Tracking** | Trello / Jira board managing backlog, user stories, sprint tasks, and bug tracking | ✅ **100% Compliant** |
 
