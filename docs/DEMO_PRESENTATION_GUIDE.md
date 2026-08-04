@@ -49,46 +49,7 @@ This guide provides a comprehensive, turn-by-turn presentation script, live demo
 
 ### Slide 4: System Architecture & AWS Infrastructure Topology
 
-```
-                  ┌─────────────────────────────────────────┐
-                  │          Client Browser / UI            │
-                  │   React 19 + TypeScript + Vite + CSS    │
-                  └────────────────────┬────────────────────┘
-                                       │ HTTPS / JSON / SSE
-                                       ▼
-                  ┌─────────────────────────────────────────┐
-                  │          Cloudflare DNS & WAF           │
-                  │        (alphaask.alphateam.live)        │
-                  └────────────────────┬────────────────────┘
-                                       │ HTTPS / Edge CDN
-                                       ▼
-                  ┌─────────────────────────────────────────┐
-                  │      Amazon API Gateway (HTTP API v2)   │
-                  │            ANY /{proxy+}                │
-                  └────────────────────┬────────────────────┘
-                                       │
-                                       ▼
-                  ┌─────────────────────────────────────────┐
-                  │    AWS Lambda (FastAPI + Docker Container)│
-                  │       (Hosted on Amazon ECR)            │
-                  └───────┬─────────────┬─────────────┬─────┘
-                          │             │             │
-        ┌─────────────────┘             │             └─────────────────┐
-        ▼                               ▼                               ▼
-┌──────────────┐                 ┌──────────────┐                ┌──────────────┐
-│  DynamoDB    │                 │ ElastiCache  │                │ 4-LLM Engine │
-│ Persistence  │                 │ Redis Cache  │                │ Orchestrator │
-│  (5 Tables)  │                 │ Rate Limiter │                │ Failover     │
-└──────────────┘                 └──────────────┘                └──────┬───────┘
-                                                                        │
-        ┌───────────────────────────────┬───────────────────────────────┼───────────────────────────────┐
-        ▼                               ▼                               ▼                               ▼
- ┌──────────────┐                ┌──────────────┐                ┌──────────────┐                ┌──────────────┐
- │ AWS Bedrock  │                │  Groq Cloud  │                │Google Gemini │                │  OpenRouter  │
- │ (Claude 3.5) │                │ (Llama-3.3   │                │ (Flash 2.5)  │                │ (DeepSeek/   │
- │              │                │  70B SSE)    │                │              │                │  GPT-4o)     │
- └──────────────┘                └──────────────┘                └──────────────┘                └──────────────┘
-```
+![AlphaAsk Architecture Diagram](alphaask-architecture.drawio.png)
 
 > **Speaker Notes**:  
 > *"Our architecture relies on 6 core engineering pillars:*  

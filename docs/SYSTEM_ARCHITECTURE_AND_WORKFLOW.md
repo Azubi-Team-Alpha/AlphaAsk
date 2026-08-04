@@ -8,6 +8,10 @@
 
 ## 1. System Architecture & Topology
 
+> **Architecture Diagram** (see full draw.io source at [docs/alphaask-architecture.drawio](docs/alphaask-architecture.drawio)):
+
+![AlphaAsk Architecture Diagram](alphaask-architecture.drawio.png)
+
 ```
                   ┌─────────────────────────────────────────┐
                   │          Client Browser / UI            │
