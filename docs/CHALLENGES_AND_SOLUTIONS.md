@@ -225,4 +225,41 @@ The API returned completed JSON payloads only after full model response generati
 
 ---
 
+## 13. OpenRouter Multi-Model Integration & Dynamic Subject Routing
+
+### Problem Statement
+Relying exclusively on single AI API providers led to rate-limit bottlenecks and model availability risks during high-concurrency periods or subject-specific academic inquiries (e.g. complex math proofs or code debugging requiring specialized reasoning models).
+
+### Root Cause
+Single-provider API calls risk failure if a specific vendor rate-limits requests or experiences transient degradation. Furthermore, different academic disciplines benefit from specialized models (e.g., DeepSeek-R1 for mathematics reasoning, Qwen-2.5-Coder for programming, Claude 3.5 Sonnet for humanities).
+
+### Solution & Resolution
+1. **OpenRouter Provider Integration**: Added `OPENROUTER_API_KEY` configuration and integrated `call_openrouter_api()` and `_stream_openrouter_native()` into [llm_services.py](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/backend/app/services/llm_services.py).
+2. **Subject Discipline Model Routing**: Configured `DISCIPLINE_MODEL_ROUTING` mapping subject areas to optimal model chains:
+   - **Math**: `deepseek/deepseek-r1` $\rightarrow$ `openai/gpt-4o` $\rightarrow$ `meta-llama/llama-3.3-70b-instruct`
+   - **Code**: `qwen/qwen-2.5-coder-32b-instruct` $\rightarrow$ `meta-llama/llama-3.3-70b-instruct` $\rightarrow$ `deepseek/deepseek-r1`
+   - **Writing & Humanities**: `anthropic/claude-3.5-sonnet` $\rightarrow$ `openai/gpt-4o` $\rightarrow$ `google/gemini-2.0-flash-001`
+   - **Science**: `google/gemini-2.0-flash-001` $\rightarrow$ `deepseek/deepseek-r1` $\rightarrow$ `anthropic/claude-3.5-sonnet`
+3. **4-Provider Failover Cascade**: Structured the primary fallback engine: AWS Bedrock $\rightarrow$ Groq Cloud API $\rightarrow$ Google Gemini API $\rightarrow$ OpenRouter API.
+
+---
+
+## 14. Strict RAG Grounding Engine & Passage Chunk Retrieval
+
+### Problem Statement
+When students attached large lecture notes or PDF documents, standard LLMs often hallucinated unverified external information rather than answering strictly from the provided course materials.
+
+### Root Cause
+Default LLM system prompts draw upon general pre-training knowledge. Without explicit passage chunking and strict grounding boundaries, models prioritize external training data over attached document text.
+
+### Solution & Resolution
+1. **Intelligent Document Chunking**: Created `chunk_and_retrieve_context()` to slice documents exceeding 12,000 characters into ~1,500 character passages with 200-character overlaps, scoring relevance against query keywords.
+2. **Strict RAG Mode (`rag_mode = True`)**: Implemented `RAG_SYSTEM_PROMPT` enforcing strict document grounding:
+   - Answers must be derived exclusively from attached document passages.
+   - Mandates section/page citations.
+   - Mandates standardized fallback response when information is ungrounded: *"The provided document does not contain sufficient information to answer this question."*
+3. **UI Composer Toggle**: Added interactive **`[⚡ RAG Strict Grounding]`** toggle in the React composer for student control.
+
+---
+
 > *Note: This document is continuously updated whenever new technical challenges or infrastructure edge-cases are addressed.*
