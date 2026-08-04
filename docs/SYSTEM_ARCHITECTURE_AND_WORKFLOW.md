@@ -2,13 +2,13 @@
 
 ## Executive Overview
 
-**AlphaAsk** is an enterprise-grade, academic support AI web application engineered for university students. The platform leverages a modern decoupled microservices architecture featuring a high-performance React 19 single-page application (SPA), Cloudflare DNS & WAF edge security, AWS CloudFront CDN, a FastAPI Python backend on AWS Lambda, AWS DynamoDB NoSQL persistence, ElastiCache Redis rate-limiting, an automated 4-provider LLM failover engine (**AWS Bedrock**, **Groq Cloud API**, **Google Gemini API**, and **OpenRouter API**), **Real-Time Server-Sent Events (SSE) word-by-word streaming**, and **Document RAG Strict Grounding Mode**.
+**AlphaAsk** is an enterprise-grade, academic support AI web application engineered for university students. The platform leverages a modern decoupled microservices architecture featuring a high-performance **React 19 SPA**, **Cloudflare DNS & WAF** edge security, **AWS CloudFront CDN**, a **FastAPI Python backend** on **AWS Lambda**, **AWS DynamoDB** NoSQL persistence, **ElastiCache Redis** rate-limiting, a **4-provider LLM failover engine** (OpenRouter API → Groq Cloud API → Google Gemini API → AWS Bedrock), **Real-Time Server-Sent Events (SSE) word-by-word streaming**, **Document & PDF RAG Strict Grounding Mode**, **AI-powered Flashcard Generation**, **Pomodoro Study Timer**, **Citation Management**, and a full academic study toolkit.
 
 ---
 
 ## 1. System Architecture & Topology
 
-> **Architecture Diagram** (see full draw.io source at [docs/alphaask-architecture.drawio](docs/alphaask-architecture.drawio)):
+> **Architecture Diagram** (see full draw.io source at [alphaask-architecture.drawio](alphaask-architecture.drawio)):
 
 ![AlphaAsk Architecture Diagram](alphaask-architecture.drawio.png)
 
@@ -23,25 +23,33 @@
                   │          Cloudflare DNS & WAF           │
                   │        (alphaask.alphateam.live)        │
                   └────────────────────┬────────────────────┘
-                                       │ HTTPS / Edge CDN
+                                       │ HTTPS / Edge Security
                                        ▼
                   ┌─────────────────────────────────────────┐
-                  │       API Gateway / FastAPI             │
-                  │        (Local Dev / AWS Lambda)          │
+                  │      Amazon API Gateway (HTTP API v2)   │
+                  │            ANY /{proxy+}                │
+                  └────────────────────┬────────────────────┘
+                                       │
+                                       ▼
+                  ┌─────────────────────────────────────────┐
+                  │    AWS Lambda (FastAPI + Mangum)         │
+                  │    Docker Container Image (ECR)         │
                   └───────┬─────────────┬─────────────┬─────┘
                           │             │             │
         ┌─────────────────┘             │             └─────────────────┐
         ▼                               ▼                               ▼
 ┌──────────────┐                 ┌──────────────┐                ┌──────────────┐
-│  DynamoDB    │                 │    Redis     │                │ 4-LLM Engine │
-│ Persistence  │                 │ Rate Limiter │                │ Orchestrator │
+│  DynamoDB    │                 │ ElastiCache  │                │ 4-LLM Engine │
+│  5 Tables    │                 │ Redis Cache  │                │ Orchestrator │
+│  (On-Demand) │                 │ 10 req/min   │                │ w/ Streaming │
 └──────────────┘                 └──────────────┘                └──────┬───────┘
                                                                         │
-        ┌───────────────────────────────┬───────────────────────────────┼───────────────────────────────┐
-        ▼                               ▼                               ▼                               ▼
+        ┌────────────────────────────────┬──────────────────────────────┼──────────────────────────────┐
+        ▼                                ▼                              ▼                              ▼
  ┌──────────────┐                ┌──────────────┐                ┌──────────────┐                ┌──────────────┐
- │ AWS Bedrock  │                │  Groq Cloud  │                │Google Gemini │                │  OpenRouter  │
- │ (Claude 3.5) │                │ (Llama-3.3)  │                │ (Flash 2.5)  │                │(DeepSeek/GPT)│
+ │  OpenRouter  │                │  Groq Cloud  │                │Google Gemini │                │ AWS Bedrock  │
+ │ (1st — SSE) │                │ (2nd — SSE)  │                │ (3rd — Sync) │                │ (4th — Sync) │
+ │ 400+ Models  │                │ Llama-3.3 70B│                │ Flash 2.5/2.0│                │ Claude 3.5   │
  └──────────────┘                └──────────────┘                └──────────────┘                └──────────────┘
 ```
 
@@ -50,128 +58,237 @@
 ## 2. Component Integration & Technical Stack
 
 ### A. Frontend Layer
+
 - **Framework**: React 19 with TypeScript, bundled via Vite.
-- **Styling**: Modern CSS design system featuring custom properties, dark/light theme tokens, IBM Plex Sans & Source Serif typography, and glassmorphic micro-animations.
-- **Rendering & Markdown**: Integrated `react-markdown` to parse headers, lists, code blocks, and blockquotes with `white-space: pre-wrap` styling.
-- **API Client**: Modular REST & SSE client ([frontend/src/lib/api.ts](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/frontend/src/lib/api.ts)) supporting synchronous POST calls and real-time streaming event readers with cross-browser `generateUUID()` fallback.
-- **Automated Test Suite**: Vitest + React Testing Library suite (`npm test`) covering navigation, component rendering, and modal workflows (6/6 tests passing).
+- **Styling**: Vanilla CSS design system — custom CSS properties, dark/light theme tokens, IBM Plex Sans & Source Serif typography, glassmorphic micro-animations.
+- **Markdown Rendering**: `react-markdown` renders headers, lists, fenced code blocks, blockquotes with `white-space: pre-wrap`.
+- **Icons**: Lucide React icon set (Send, Plus, LogIn, BookOpen, Bookmark, FolderKanban, Sparkles, ClipboardList, Moon, Sun, etc.).
+- **API Client**: `frontend/src/lib/api.ts` — REST + SSE client. Reads `VITE_API_BASE_URL` at build time for environment-aware API routing. Strips trailing slashes.
+- **UUID**: `frontend/src/lib/utils.ts` — `generateUUID()` using Web Crypto API with `Math.random()` fallback for HTTP environments.
+- **Testing**: Vitest + React Testing Library — 4 test modules covering navigation, component rendering, modal workflows (6/6 passing).
+
+#### Frontend Components (`frontend/src/components/`)
+
+| Component | Purpose |
+|---|---|
+| `AlphaAskApp.tsx` | Top-level app shell — wraps routing, auth context, theme state |
+| `App.tsx` | Root component (1,210 lines) — full state management for chat, auth, sessions, modals |
+| `AuthModal.tsx` | Login/register forms with show/hide password toggle and JWT storage |
+| `Composer.tsx` | Message composer — file attachment, RAG mode toggle (`⚡ RAG Strict Grounding`), send button |
+| `MessageThread.tsx` | Scrollable conversation thread with auto-scroll to latest message |
+| `MessageRow.tsx` | Individual message bubble — markdown rendering, copy-to-clipboard, save-answer action |
+| `ThinkingIndicator.tsx` | Animated "thinking" loading state during LLM generation |
+| `Sidebar.tsx` | Collapsible sidebar — session list, new chat button, study toolkit launchers |
+| `TopBar.tsx` | Top navigation — dark/light theme toggle, auth controls (Login/Register/Logout) |
+| `Hero.tsx` | Landing hero section shown to unauthenticated users |
+| `SubjectsModal.tsx` | 6-discipline academic taxonomy explorer — click discipline to inject targeted prompt |
+| `FlashcardModal.tsx` | AI-powered flashcard generation from chat content or uploaded lecture notes |
+| `PomodoroTimer.tsx` | Built-in Pomodoro study timer (25 min work / 5 min break cycles) |
+| `CitationModal.tsx` | Academic citation manager — generates APA/MLA formatted citations |
+| `ClassesModal.tsx` | Course workspace manager — enroll in courses (e.g. `CS 301`, `MATH 202`), switch active course context; persisted in `localStorage` |
+| `SavedAnswersModal.tsx` | Bookmark AI responses, full-text search saved items, copy markdown to clipboard; persisted in `localStorage` |
+| `QuestionManagement.tsx` | Browse, search, and delete personal question history (calls `GET/DELETE /api/questions`) |
+| `FAQ.tsx` | Frequently Asked Questions viewer (calls `GET /api/FAQ`) |
+| `MoreModal.tsx` | Multi-provider AI diagnostics, keyboard shortcuts (`Ctrl+Enter` send, `Ctrl+K` new chat), academic integrity guide |
 
 ### B. Backend API Layer
-- **Framework**: FastAPI (Python 3.12) wrapped with Mangum for serverless AWS Lambda execution.
-- **Authentication**: JWT-based authentication using HS256 algorithm and `bcrypt` password hashing.
-- **Configuration & Core**: Pydantic v2 Settings (`ConfigDict`) loading environment variables (`.env`).
-- **Automated Test Suite**: Pytest suite (`.venv/bin/pytest`) verifying API routes, authentication, history retrieval, and question management (13/13 tests passing).
+
+- **Framework**: FastAPI (Python 3.12) + Uvicorn ASGI server.
+- **Serverless Adapter**: Mangum wraps FastAPI for AWS Lambda execution (graceful `ImportError` fallback for local dev).
+- **Authentication**: JWT (HS256 algorithm, 480-minute / 8-hour expiry) via `python-jose`; `bcrypt` password hashing via `passlib`.
+- **Configuration**: Pydantic v2 `BaseSettings` (`SettingsConfigDict`) loading from `.env` file; strong JWT secret validation.
+- **CORS Origins**: `https://alphaask.alphateam.live`, `http://localhost:5173`, `http://localhost:3000`, `http://127.0.0.1:5173`, S3 static website URL.
+- **Route Mounting**: All routers mounted at **both** root (`/endpoint`) and `/api` prefix (`/api/endpoint`) for API Gateway proxy + local dev proxy compatibility.
+
+#### Backend API Routes (`backend/app/api/`)
+
+| File | Routes | Auth |
+|---|---|:---:|
+| `health.py` | `GET /health` | No |
+| `auth.py` | `POST /auth/register`, `POST /auth/login` | No |
+| `sessions.py` | `POST /sessions` | Yes |
+| `history.py` | `GET /conversations`, `GET /history/{session_id}` | Yes |
+| `ask.py` | `POST /ask` (sync), `POST /ask/stream` (SSE) | Yes |
+| `questions.py` | `GET /questions`, `GET /questions/{id}`, `DELETE /questions/{id}` | Yes |
+| `questions.py` (faq_router) | `GET /FAQ` | No |
 
 ### C. Data & State Storage Layer
-- **Amazon DynamoDB**:
-  - `alphaask-Users`: User credentials and subscription tier data.
-  - `alphaask-Sessions`: Active student chat sessions.
-  - `alphaask-Messages`: Full timestamped exchange history.
-  - `alphaask-Questions`: Submitted student questions with `UserQuestionsIndex` GSI.
-  - `alphaask-FAQ`: Curated knowledgebase items.
-- **Redis / ElastiCache**: Sliding-window rate-limiting to prevent API abuse (fallback to memory cache in local environment).
+
+#### Amazon DynamoDB (5 On-Demand NoSQL Tables)
+
+| Table | PK | GSI | Data |
+|---|---|---|---|
+| `alphaask-Users` | `user_id` | — | Email, hashed password, created_at |
+| `alphaask-Sessions` | `session_id` | — | user_id, title, created_at, updated_at |
+| `alphaask-Messages` | `message_id` | — | session_id, role (user/assistant), content, timestamp |
+| `alphaask-Questions` | `id` | `UserQuestionsIndex` (PK: `user_id`) | user_id, session_id, message_id, question, answer, created_at |
+| `alphaask-FAQ` | `id` | — | Static FAQ entries (served inline) |
+
+- **Questions GSI (`UserQuestionsIndex`)**: Enables O(1) user-scoped question history retrieval without full table scans.
+- **Question Deletion Cascade**: `DELETE /questions/{id}` removes both the `alphaask-Questions` record and the associated `alphaask-Messages` entry.
+
+#### Redis / ElastiCache
+- **Rate Limiting**: Sliding-window algorithm — 10 requests per minute per `user_id`.
+- **Fallback**: Graceful in-memory cache fallback when Redis is unavailable (local dev).
+- **Terraform**: `elasticache.tf` provisions the Redis cluster + subnet group.
 
 ### D. Multi-Provider 4-LLM Orchestration Engine
-- **Failover Chain & Model Routing**:
-  1. **AWS Bedrock** (`us.anthropic.claude-3-5-sonnet-20241022-v2:0`) — Primary cloud model for high-reasoning tasks.
-  2. **Groq Cloud API** (`llama-3.3-70b-versatile`) — Ultra-low latency streaming provider (`GROQ_API_KEY`).
-  3. **Google Gemini API** (`gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`) — Secondary high-capacity fallback (`GEMINI_API_KEY`).
-  4. **OpenRouter API** (`deepseek/deepseek-r1`, `openai/gpt-4o`, `anthropic/claude-3.5-sonnet`, `meta-llama/llama-3.3-70b-instruct`, `qwen/qwen-2.5-coder-32b-instruct`) — Tertiary multi-model fallback (`OPENROUTER_API_KEY`).
-- **Token Output Limit**: 4,096 tokens per request (2,048 tokens on SSE streaming).
-- **HTTP Request Timeout**: 45 seconds (20s per provider in failover loop).
+
+#### Synchronous Failover (`get_llm_response` — `POST /ask`)
+
+The failover cascade tries each provider in order; the **first successful response is returned**:
+
+1. **OpenRouter API** (`OPENROUTER_API_KEY`) — Subject-aware discipline model routing; 20s timeout per model; iterates model list until success.
+2. **Groq Cloud API** (`GROQ_API_KEY`) — `llama-3.3-70b-versatile`; 4,096 max tokens; 20s timeout.
+3. **Google Gemini API** (`GEMINI_API_KEY`) — `gemini-2.5-flash` → `gemini-2.0-flash` → `gemini-1.5-flash`; 4,096 max tokens.
+4. **AWS Bedrock** (`boto3`) — `us.anthropic.claude-3-5-sonnet-20241022-v2:0`; 45s read timeout; 2 retry attempts.
+
+#### SSE Streaming Failover (`stream_llm_response` — `POST /ask/stream`)
+
+1. **Native OpenRouter streaming** — chunked HTTP SSE with `stream=True`; 2,048 max tokens (within API Gateway 29s hard limit).
+2. **Native Groq streaming** — chunked HTTP SSE with `stream=True`; 4,096 max tokens; 60s socket timeout.
+3. **Word-chunk fallback** — calls `get_llm_response()` (full cascade above), then splits result into 3-word chunks emitted as SSE events.
+
+#### Subject-Discipline Model Routing (OpenRouter only)
+
+| Subject | Primary | Fallback Chain |
+|---|---|---|
+| **Math** | `deepseek/deepseek-r1` | `openai/gpt-4o` → `meta-llama/llama-3.3-70b-instruct` → `openai/gpt-4o-mini` |
+| **Writing** | `anthropic/claude-3.5-sonnet` | `openai/gpt-4o` → `google/gemini-2.0-flash-001` → `openai/gpt-4o-mini` |
+| **Code** | `qwen/qwen-2.5-coder-32b-instruct` | `meta-llama/llama-3.3-70b-instruct` → `deepseek/deepseek-r1` → `openai/gpt-4o-mini` |
+| **Science** | `google/gemini-2.0-flash-001` | `deepseek/deepseek-r1` → `anthropic/claude-3.5-sonnet` → `openai/gpt-4o-mini` |
+| **History** | `anthropic/claude-3.5-sonnet` | `openai/gpt-4o` → `meta-llama/llama-3.3-70b-instruct` → `openai/gpt-4o-mini` |
+| **Study** | `openai/gpt-4o-mini` | `google/gemini-2.0-flash-001` → `meta-llama/llama-3.3-70b-instruct` |
+
+#### System Prompts
+
+- **`SYSTEM_PROMPT`**: Positions AlphaAsk as a versatile academic + general knowledge assistant. Instructs detailed, Markdown-structured responses with examples and step-by-step guidance. No "be concise" instruction.
+- **`RAG_SYSTEM_PROMPT`**: RAG Strict Grounding Mode — **5 strict rules**: answer ONLY from attached document passages; no external knowledge; explicit "document does not contain..." fallback; mandatory passage citations; Markdown formatting.
+
+#### Subject Persona Injection (`SUBJECT_PERSONAS`)
+
+When a subject is selected, a discipline-specific system instruction is prepended to the prompt:
+
+| Subject | Injected Focus |
+|---|---|
+| **math** | Step-by-step reasoning, variable definitions, formula formatting, geometric intuition |
+| **science** | Reaction mechanisms, physical principles, biological pathways, lab fundamentals |
+| **writing** | Thesis formulation, essay structure, academic rhetoric, APA/MLA citations |
+| **code** | Clean code snippets, Big-O analysis, algorithm steps, edge cases, debugging |
+| **history** | Historical context, primary source analysis, cause-and-effect, comparative analysis |
+| **study** | Active recall, Pomodoro technique, Feynman method, structured revision plans |
 
 ---
 
 ## 3. End-to-End Execution Workflows
 
 ### 3.1 User Authentication Flow
-1. User enters credentials via `AuthModal.tsx`.
-2. Request hits `/api/auth/login` or `/api/auth/register`.
-3. Backend validates password hash against DynamoDB `alphaask-Users`.
-4. Returns JWT Bearer Token stored in browser `localStorage`.
+1. User enters credentials in `AuthModal.tsx` (login or register).
+2. Request hits `POST /api/auth/register` or `POST /api/auth/login`.
+3. Backend validates bcrypt password hash against `alphaask-Users` DynamoDB table.
+4. Returns JWT Bearer Token (HS256, 8-hour expiry) stored in browser `localStorage`.
 
-### 3.2 Real-Time SSE Word-by-Word Streaming Q&A Flow (`/api/ask/stream`)
-1. Student types question in `Composer.tsx` (optionally attaching lecture notes/PDFs).
-2. `useChat` hook initiates SSE fetch request to `POST /api/ask/stream`.
-3. Backend checks Redis rate limits and constructs context prompt (`prepare_user_question`).
-4. Backend yields real-time word chunks (`data: {"content": "..."}\n\n`) via `StreamingResponse(media_type="text/event-stream")`.
-5. Frontend `askAlphaAskStream` reader consumes tokens live, updating active assistant message placeholder word-by-word.
-6. Upon stream completion, backend automatically persists user prompt and generated answer into DynamoDB `alphaask-Messages`.
+### 3.2 Real-Time SSE Streaming Q&A Flow (`POST /api/ask/stream`)
+1. Student types question in `Composer.tsx` (optionally attaching a document and toggling RAG mode).
+2. `useChat` hook in `useChat.ts` initiates SSE fetch to `POST /api/ask/stream`.
+3. Backend enforces Redis rate limit (10 req/min); validates session ownership.
+4. Persists user message to `alphaask-Messages` before stream starts (captures `message_id`).
+5. `stream_llm_response()` tries native OpenRouter SSE → native Groq SSE → word-chunk fallback.
+6. Frontend SSE reader in `api.ts` (`askAlphaAskStream`) consumes token chunks live, updating the active message placeholder word-by-word.
+7. Upon stream completion, backend persists full accumulated answer to `alphaask-Messages` and creates a `alphaask-Questions` record (with `UserQuestionsIndex` GSI entry).
 
-### 3.3 Document & PDF Upload (RAG Strict Grounding) Flow
-1. Student clicks attachment button `+` in `Composer.tsx` and selects a `.pdf`, `.txt`, `.md`, or `.doc` file.
-2. Client-side stream text parser extracts clean printable text lines (stripping PDF metric arrays `/Widths` and binary headers `/FirstChar`).
-3. Student toggles **`[⚡ RAG Strict Grounding: ON]`** in the UI composer (`rag_mode = True`).
-4. Upon submission, backend receives `document_context` and `rag_mode: true`:
-   - `chunk_and_retrieve_context()` divides long documents into overlapping passages (~1,500 chars with 200 char overlap).
-   - Performs keyword relevance scoring against the student query to select the top relevant passages.
-   - Activates `RAG_SYSTEM_PROMPT` enforcing strict document grounding, anti-hallucination rules, and mandatory passage citations.
-5. Content is injected into the AI prompt structure:
-   ```
-   [RAG STRICT GROUNDING DOCUMENT PASSAGES]:
-   The following passages were retrieved from the attached document. Answer ONLY using these passages:
-   ... (Top retrieved document passages) ...
-   [STUDENT QUESTION (RAG STRICT GROUNDING)]: (User prompt)
-   ```
-6. AI model generates targeted, grounded responses based exclusively on the uploaded document text.
+### 3.3 Document & PDF RAG Strict Grounding Flow
+1. Student clicks the `+` attachment button in `Composer.tsx` and selects a `.pdf`, `.txt`, `.md`, or `.docx` file.
+2. **Server-side extraction** (`pypdf`): `extract_pdf_with_pypdf()` extracts text page-by-page with `--- Page N ---` headers.
+3. **Fallback cleaning** (`clean_pdf_text_context()`): handles raw PDF binary streams, base64 data URLs, Latin1 encoding, regex text literal extraction, and XML/DOCX tag stripping.
+4. Student toggles **`[⚡ RAG Strict Grounding: ON]`** in the composer.
+5. Backend receives `document_context` + `rag_mode: true`:
+   - If document > 12,000 chars: `chunk_and_retrieve_context()` creates 1,500-char chunks with 200-char overlaps, scores each chunk against query keywords (stopword-filtered), and selects top-5 most relevant passages.
+   - Injects passages with `RAG_STRICT GROUNDING` header into prompt (max 60,000 chars).
+   - Activates `RAG_SYSTEM_PROMPT` with 5 strict anti-hallucination rules.
+6. AI generates targeted, grounded responses citing only document passages.
+
+### 3.4 Synchronous Q&A Flow (`POST /ask`)
+1. Same rate-limit and session validation as streaming.
+2. Fetches conversation history from DynamoDB for context.
+3. Calls `get_llm_response()` (4-provider failover cascade).
+4. Persists both user message and AI answer to `alphaask-Messages`.
+5. Creates `alphaask-Questions` record for history tracking.
 
 ---
 
-## 4. Interactive Sidebar Feature Modules
+## 4. Study Toolkit Feature Modules
 
-| Component | Purpose & Functionality | Persistence / State |
-|---|---|---|
-| **SubjectsModal (`SubjectsModal.tsx`)** | Taxonomy explorer for 6 core academic disciplines: Mathematics, Computer Science, Natural Sciences, Humanities, Business, and Study Skills. Allows direct prompt injection. | Dynamic UI state |
-| **ClassesModal (`ClassesModal.tsx`)** | Course workspace manager (`CS 301`, `MATH 202`, etc.) allowing students to add courses, switch active course context, and view course-specific questions. | `localStorage` (`alphaask_enrolled_courses`) |
-| **SavedAnswersModal (`SavedAnswersModal.tsx`)** | Bookmarked answers repository allowing students to save helpful AI responses, search bookmarks, copy content to clipboard, or remove bookmarks. | `localStorage` (`alphaask_saved_answers`) |
-| **MoreModal (`MoreModal.tsx`)** | Multi-provider AI status explorer, keyboard shortcuts cheat-sheet (`Ctrl+Enter` send, `Ctrl+K` new chat), and academic integrity compliance guide. | System diagnostics |
+| Module | Component | Purpose | Persistence |
+|---|---|---|---|
+| **Academic Subjects Explorer** | `SubjectsModal.tsx` | 6-discipline taxonomy — click to inject focused prompts (Math, Science, Writing, Code, History, Study Skills) | Dynamic UI state |
+| **AI Flashcard Generator** | `FlashcardModal.tsx` | Generate study flashcards from conversation content or uploaded lecture notes using LLM | Session state |
+| **Pomodoro Study Timer** | `PomodoroTimer.tsx` | 25-minute focus / 5-minute break cycle timer with controls | UI state |
+| **Citation Manager** | `CitationModal.tsx` | APA/MLA citation generation from conversation or document content | Session state |
+| **Course Workspace Manager** | `ClassesModal.tsx` | Enroll in courses (`CS 301`, `MATH 202`), switch active course context, view course-specific questions | `localStorage` (`alphaask_enrolled_courses`) |
+| **Saved Answers & Bookmarks** | `SavedAnswersModal.tsx` | Bookmark helpful AI responses, full-text search, copy markdown to clipboard, remove bookmarks | `localStorage` (`alphaask_saved_answers`) |
+| **Question History** | `QuestionManagement.tsx` | View all past questions (O(1) GSI lookup), search, delete with cascade | DynamoDB GSI |
+| **FAQ** | `FAQ.tsx` | 5-entry static FAQ on getting started, subjects, privacy, sharing, and accuracy | Static (API) |
+| **System Info & Shortcuts** | `MoreModal.tsx` | Multi-provider AI status, keyboard shortcuts (`Ctrl+Enter` send, `Ctrl+K` new chat), academic integrity guide | System diagnostics |
 
 ---
 
 ## 5. System Operational Status Matrix
 
-| Component / Feature | Operational Status | Verification Method & Notes |
-|---|---|---|
-| **User Authentication** | ✅ Operational | Login, Registration, JWT Bearer Token auth |
-| **Session Management** | ✅ Operational | Multi-session creation, switching, history loading |
-| **4-Provider LLM Chain** | ✅ Operational | AWS Bedrock $\rightarrow$ Groq $\rightarrow$ Gemini Flash $\rightarrow$ OpenRouter failover |
-| **Real-Time SSE Streaming** | ✅ Operational | `/api/ask/stream` word-by-word streaming |
-| **Document & PDF Upload (RAG)** | ✅ Operational | Client/server text stream extraction & strict document grounding mode |
-| **Academic Subjects Explorer** | ✅ Operational | `SubjectsModal.tsx` discipline prompt & model routing |
-| **Classes & Courses Manager** | ✅ Operational | `ClassesModal.tsx` enrolled course manager |
-| **Saved Answers & Bookmarks** | ✅ Operational | `SavedAnswersModal.tsx` search & bookmarking |
-| **Platform Study Toolkit** | ✅ Operational | `MoreModal.tsx` AI diagnostics & cheatsheets |
+| Component / Feature | Status | Verification Method |
+|---|:---:|---|
+| **User Authentication** | ✅ Operational | Login, Registration, JWT Bearer Token (8h expiry) |
+| **Session Management** | ✅ Operational | Multi-session create, list, switch, history load |
+| **4-Provider LLM Engine** | ✅ Operational | OpenRouter → Groq → Gemini → Bedrock failover |
+| **Subject Discipline Routing** | ✅ Operational | 6 subjects × dedicated OpenRouter model chains |
+| **Real-Time SSE Streaming** | ✅ Operational | Native OpenRouter + Groq SSE; word-chunk fallback |
+| **RAG Strict Grounding Mode** | ✅ Operational | Document chunking, keyword scoring, strict prompts |
+| **PDF/Document Upload** | ✅ Operational | pypdf + base64 + regex fallback; 60K char limit |
+| **AI Flashcard Generation** | ✅ Operational | `FlashcardModal.tsx` — LLM-powered cards |
+| **Pomodoro Study Timer** | ✅ Operational | 25/5 min cycles with controls |
+| **Citation Manager** | ✅ Operational | APA/MLA citation generation |
+| **Academic Subjects Explorer** | ✅ Operational | 6-discipline prompt injection via `SubjectsModal.tsx` |
+| **Course Workspace Manager** | ✅ Operational | `ClassesModal.tsx` — localStorage-persisted courses |
+| **Saved Answers & Bookmarks** | ✅ Operational | `SavedAnswersModal.tsx` — search, copy, delete |
+| **Question History & CRUD** | ✅ Operational | O(1) GSI lookup, delete with message cascade |
+| **FAQ System** | ✅ Operational | 5 static FAQ entries via `GET /api/FAQ` |
+| **Redis Rate Limiting** | ✅ Operational | 10 req/min/user; in-memory fallback |
+| **DynamoDB Persistence** | ✅ Operational | 5 on-demand tables; `UserQuestionsIndex` GSI |
 | **Automated Test Suites** | ✅ Operational | Pytest backend (13/13) + Vitest frontend (6/6) |
-| **CI/CD & Terraform Infra** | ✅ Operational | 4-Stage GitHub Actions pipeline + AWS Terraform provision |
+| **Terraform Infrastructure** | ✅ Operational | Lambda, API GW, DynamoDB, ECR, ElastiCache, S3, CloudFront, IAM |
+| **CI/CD Pipeline** | ✅ Operational | 4-stage GitHub Actions: lint → test → ECR build → Terraform deploy |
+| **Cloudflare DNS/WAF** | ✅ Operational | alphaask.alphateam.live — global DNS + edge WAF |
 
 ---
 
-## 6. Team Meeting Summary: Completed vs. Future Roadmap
+## 6. Team Summary: Completed vs. Future Roadmap
 
-### A. What Has Been Completed (100% Production Ready)
-1. **Core Serverless AWS Backend**: FastAPI container app running on AWS Lambda with API Gateway HTTP v2 routing, Cloudflare DNS, DynamoDB NoSQL database, and Redis rate limiting.
-2. **4-Provider AI Resilience Engine**: Zero-downtime failover cascade between AWS Bedrock (Claude 3.5 Sonnet), Groq (Llama 3.3 70B), Google Gemini (Flash 2.5/2.0), and OpenRouter API (DeepSeek-R1, GPT-4o, Qwen-Coder).
-3. **Real-Time SSE Streaming**: Word-by-word live AI response streaming.
-4. **Document RAG Upload & Strict Grounding**: Lecture notes & PDF text extraction, passage chunking, keyword relevance scoring, and strict document grounding mode.
-5. **Complete Sidebar Toolsuite**: Enrolled course workspaces, saved answer bookmarks, academic subjects explorer, and system diagnostics.
-6. **Automated Testing Suite**: 13 Pytest backend unit tests and 6 Vitest frontend integration tests.
+### A. Completed (100% Production Ready)
+1. **Serverless AWS Architecture**: FastAPI + Mangum container on Lambda; API Gateway HTTP v2; ECR Docker registry; Cloudflare DNS + CloudFront CDN.
+2. **4-Provider AI Engine**: Zero-downtime failover — OpenRouter (400+ models, discipline routing), Groq (Llama 3.3 70B native SSE), Google Gemini (Flash 2.5/2.0), AWS Bedrock (Claude 3.5 Sonnet).
+3. **Real-Time SSE Streaming**: Native OpenRouter & Groq SSE; word-chunk fallback for Gemini/Bedrock.
+4. **RAG Strict Grounding**: pypdf extraction, document chunking, keyword relevance scoring, strict anti-hallucination system prompts.
+5. **Complete Study Toolkit**: Flashcard generator, Pomodoro timer, Citation manager, Course workspaces, Saved answers, Question history, FAQ, Subject explorer.
+6. **Automated Testing**: 13 Pytest backend unit tests + 6 Vitest frontend integration tests.
+7. **Full CI/CD**: 4-stage GitHub Actions pipeline with Terraform IaC deployment.
 
-### B. Future Roadmap (Post-Launch Phase 2 Opportunities)
-1. **Server-Side Vector Database (Pinecone / Pgvector)**: Persistent multi-document semantic similarity search across semester-long course materials.
-2. **Multi-Modal Image & Voice Input**: Direct OCR scanning of handwritten equation photos and voice message transcriptions.
+### B. Future Roadmap (Phase 2)
+1. **Vector Database (Pinecone / pgvector)**: Persistent semantic similarity search across semester course materials.
+2. **Multi-Modal Input**: OCR for handwritten equation photos; voice message transcription.
 3. **Collaborative Study Groups**: Real-time shared chat workspaces for multi-student group study.
-4. **Institutional Admin Dashboard**: Analytics dashboard for university professors to view top academic queries and subject trends.
+4. **Institutional Admin Dashboard**: Analytics for professors — top queries, subject trends, curriculum gap analysis.
+5. **OpenRouter Streaming**: Full streaming support for all 400+ OpenRouter models.
 
 ---
 
 ## 7. Architecture Requirements Compliance Audit (Azubi Africa Specification)
 
-| Required Service / Feature | Slide Requirement Description | Implementation Status in AlphaAsk | Compliance |
+| Required Service / Feature | Requirement Description | AlphaAsk Implementation | Compliance |
 |:---|:---|:---|:---:|
-| **AWS Cloud** | Host infrastructure on AWS Cloud | Provisioned via Terraform (`infra/terraform/`) in AWS region `us-east-1` | ✅ **100% Met** |
-| **CI/CD Pipeline** | GitHub Actions automated workflow | 4-Stage CI/CD pipeline (`.github/workflows/deploy.yml`) for lint, test, ECR build, and Terraform deploy | ✅ **100% Met** |
-| **Amazon API Gateway** | Public API Endpoints / Receives Requests | HTTP API v2 instance routing all incoming requests to Lambda (`ANY /{proxy+}`) | ✅ **100% Met** |
-| **AWS Lambda** | Processes backend API requests | FastAPI container image hosted on Amazon ECR and executed serverlessly via Lambda | ✅ **100% Met** |
-| **Amazon DynamoDB** | Store questions, messages, and responses | 5 On-Demand NoSQL tables (`Users`, `Sessions`, `Messages`, `Questions` with `UserQuestionsIndex` GSI, `FAQ`) | ✅ **100% Met** |
-| **AI Service** | Call external API / ML model | 4-Provider LLM engine: AWS Bedrock (`Claude 3.5`), Groq (`Llama-3.3 70B`), Google Gemini (`Flash 2.5`), and OpenRouter (`DeepSeek-R1`) | ✅ **100% Met** |
+| **AWS Cloud** | Host infrastructure on AWS Cloud | Provisioned via Terraform (`infra/terraform/`) in `us-east-1` | ✅ **100% Met** |
+| **CI/CD Pipeline** | GitHub Actions automated workflow | 4-stage pipeline (`.github/workflows/deploy.yml`): lint → test → ECR build → Terraform deploy | ✅ **100% Met** |
+| **Amazon API Gateway** | Public API endpoints | HTTP API v2 routing `ANY /{proxy+}` → Lambda; CORS-enabled | ✅ **100% Met** |
+| **AWS Lambda** | Serverless compute | FastAPI container image via Amazon ECR; Mangum ASGI adapter | ✅ **100% Met** |
+| **Amazon DynamoDB** | Store questions, messages, responses | 5 on-demand tables; `UserQuestionsIndex` GSI for O(1) user-scoped queries | ✅ **100% Met** |
+| **AI Service** | External API / ML model | 4-provider: OpenRouter (400+ models) + Groq (Llama 3.3 70B) + Gemini (Flash 2.5) + Bedrock (Claude 3.5) | ✅ **100% Met** |
 | **Trello / Jira** | Agile task & project management | Team workflow tracking user stories, bugs, and sprint task progress | ✅ **100% Met** |
