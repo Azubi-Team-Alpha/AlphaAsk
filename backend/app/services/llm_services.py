@@ -32,6 +32,17 @@ SYSTEM_PROMPT = (
     "Provide detailed explanations, examples, and step-by-step guidance. Cite sources where relevant."
 )
 
+RAG_SYSTEM_PROMPT = (
+    "You are a Retrieval-Augmented Generation (RAG) Academic Assistant operating in STRICT DOCUMENT GROUNDING MODE. "
+    "Your core task is to answer student questions STRICTLY and ONLY using facts explicitly contained within the provided document passages. "
+    "STRICT GROUNDING RULES:\n"
+    "1. Answer ONLY using information explicitly stated in the attached document context.\n"
+    "2. Do NOT use outside knowledge, unverified assumptions, or external facts not present in the document.\n"
+    "3. If the answer cannot be found or directly inferred from the provided document, state clearly: 'The provided document does not contain sufficient information to answer this question.'\n"
+    "4. Cite specific section headers, page numbers, or passage IDs whenever citing facts from the document.\n"
+    "5. Format your response cleanly using Markdown headings, bullet points, and code blocks where applicable."
+)
+
 
 class LLMError(Exception):
     """Raised when the LLM call fails after our own error handling."""
@@ -121,7 +132,46 @@ SUBJECT_PERSONAS = {
 }
 
 
-def prepare_user_question(new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
+def chunk_and_retrieve_context(document_text: str, question: str, top_k: int = 5) -> str:
+    cleaned = clean_pdf_text_context(document_text)
+    if not cleaned:
+        return ""
+
+    if len(cleaned) <= 12000:
+        return cleaned
+
+    chunk_size = 1500
+    overlap = 200
+    chunks = []
+    start = 0
+    while start < len(cleaned):
+        end = min(start + chunk_size, len(cleaned))
+        chunk = cleaned[start:end].strip()
+        if chunk:
+            chunks.append(chunk)
+        start += (chunk_size - overlap)
+        if end >= len(cleaned):
+            break
+
+    q_words = set(re.findall(r'\w+', question.lower())) - {
+        "the", "a", "an", "is", "are", "and", "or", "in", "on", "of", "to", "what", "how", "why", "who", "where", "when"
+    }
+
+    if not q_words:
+        return "\n\n---\n\n".join(chunks[:top_k])
+
+    scored = []
+    for idx, c in enumerate(chunks):
+        c_words = set(re.findall(r'\w+', c.lower()))
+        score = sum(2 if word in c_words else 0 for word in q_words)
+        scored.append((score, idx, c))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top_chunks = [item[2] for item in scored[:top_k]]
+    return "\n\n---\n\n".join(top_chunks)
+
+
+def prepare_user_question(new_question: str, document_context: str | None = None, subject: str | None = None, rag_mode: bool = False) -> str:
     question = new_question.strip() or "Hello"
     parts = []
 
@@ -129,14 +179,27 @@ def prepare_user_question(new_question: str, document_context: str | None = None
         parts.append(f"[{SUBJECT_PERSONAS[subject.lower()]}]")
 
     if document_context and document_context.strip():
-        cleaned_doc = clean_pdf_text_context(document_context)
-        if cleaned_doc:
-            parts.append(
-                f"[ATTACHED STUDY DOCUMENT / LECTURE NOTES CONTEXT]:\n"
-                f"```\n{cleaned_doc[:60000]}\n```"
-            )
+        if rag_mode:
+            retrieved_doc = chunk_and_retrieve_context(document_context, question)
+            if retrieved_doc:
+                parts.append(
+                    f"[RAG STRICT GROUNDING DOCUMENT PASSAGES]:\n"
+                    f"The following passages were retrieved from the attached document. Answer ONLY using these passages:\n"
+                    f"```\n{retrieved_doc[:60000]}\n```"
+                )
+        else:
+            cleaned_doc = clean_pdf_text_context(document_context)
+            if cleaned_doc:
+                parts.append(
+                    f"[ATTACHED STUDY DOCUMENT / LECTURE NOTES CONTEXT]:\n"
+                    f"```\n{cleaned_doc[:60000]}\n```"
+                )
 
-    parts.append(f"[STUDENT QUESTION]: {question}")
+    if rag_mode:
+        parts.append(f"[STUDENT QUESTION (RAG STRICT GROUNDING)]: {question}\n(Remember: Answer strictly using facts from the attached document passages. If unavailable, state that the document does not contain the answer.)")
+    else:
+        parts.append(f"[STUDENT QUESTION]: {question}")
+
     return "\n\n".join(parts)
 
 
@@ -195,20 +258,21 @@ def get_openrouter_models_for_subject(subject: str | None = None) -> list[str]:
     return [m for m in combined if m and not (m in seen or seen.add(m))]
 
 
-def call_openrouter_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
+def call_openrouter_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None, rag_mode: bool = False) -> str:
     if not settings.openrouter_api_key:
         raise LLMError("OPENROUTER_API_KEY is not configured.")
 
     url = "https://openrouter.ai/api/v1/chat/completions"
+    sys_prompt = RAG_SYSTEM_PROMPT if rag_mode else SYSTEM_PROMPT
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": sys_prompt}]
     for msg in conversation_history:
         role = "user" if msg.get("role") == "user" else "assistant"
         content = (msg.get("content") or "").strip()
         if content:
             messages.append({"role": role, "content": content})
 
-    question = prepare_user_question(new_question, document_context, subject)
+    question = prepare_user_question(new_question, document_context, subject, rag_mode)
     messages.append({"role": "user", "content": question})
 
     model_list = get_openrouter_models_for_subject(subject)
@@ -254,21 +318,22 @@ def call_openrouter_api(conversation_history: list[dict], new_question: str, doc
     raise LLMError(last_err or "OpenRouter API failed")
 
 
-def _stream_openrouter_native(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> Generator[str, None, None]:
+def _stream_openrouter_native(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None, rag_mode: bool = False) -> Generator[str, None, None]:
     """Native streaming from OpenRouter API using OpenAI-compatible chunked HTTP transfer."""
     if not settings.openrouter_api_key:
         raise LLMError("OPENROUTER_API_KEY is not configured.")
 
     url = "https://openrouter.ai/api/v1/chat/completions"
+    sys_prompt = RAG_SYSTEM_PROMPT if rag_mode else SYSTEM_PROMPT
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": sys_prompt}]
     for msg in conversation_history:
         role = "user" if msg.get("role") == "user" else "assistant"
         content = (msg.get("content") or "").strip()
         if content:
             messages.append({"role": role, "content": content})
 
-    question = prepare_user_question(new_question, document_context, subject)
+    question = prepare_user_question(new_question, document_context, subject, rag_mode)
     messages.append({"role": "user", "content": question})
 
     model_list = get_openrouter_models_for_subject(subject)
@@ -323,20 +388,21 @@ def _stream_openrouter_native(conversation_history: list[dict], new_question: st
         raise LLMError(f"OpenRouter streaming timeout/network error: {str(e)}")
 
 
-def call_groq_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
+def call_groq_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None, rag_mode: bool = False) -> str:
     if not settings.groq_api_key:
         raise LLMError("GROQ_API_KEY is not configured.")
 
     url = "https://api.groq.com/openai/v1/chat/completions"
+    sys_prompt = RAG_SYSTEM_PROMPT if rag_mode else SYSTEM_PROMPT
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": sys_prompt}]
     for msg in conversation_history:
         role = "user" if msg.get("role") == "user" else "assistant"
         content = (msg.get("content") or "").strip()
         if content:
             messages.append({"role": role, "content": content})
 
-    question = prepare_user_question(new_question, document_context, subject)
+    question = prepare_user_question(new_question, document_context, subject, rag_mode)
     messages.append({"role": "user", "content": question})
 
     payload = {
@@ -368,10 +434,11 @@ def call_groq_api(conversation_history: list[dict], new_question: str, document_
         raise LLMError(f"Groq API network error: {str(e)}")
 
 
-def call_gemini_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
+def call_gemini_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None, rag_mode: bool = False) -> str:
     if not settings.gemini_api_key:
         raise LLMError("GEMINI_API_KEY is not configured.")
 
+    sys_prompt = RAG_SYSTEM_PROMPT if rag_mode else SYSTEM_PROMPT
     gemini_models = [
         "gemini-2.5-flash",
         "gemini-2.0-flash",
@@ -390,12 +457,12 @@ def call_gemini_api(conversation_history: list[dict], new_question: str, documen
         if content:
             contents.append({"role": role, "parts": [{"text": content}]})
 
-    question = prepare_user_question(new_question, document_context, subject)
+    question = prepare_user_question(new_question, document_context, subject, rag_mode)
     contents.append({"role": "user", "parts": [{"text": question}]})
 
     payload = {
         "system_instruction": {
-            "parts": [{"text": SYSTEM_PROMPT}]
+            "parts": [{"text": sys_prompt}]
         },
         "contents": contents,
         "generationConfig": {
@@ -433,9 +500,10 @@ def call_gemini_api(conversation_history: list[dict], new_question: str, documen
     raise LLMError(last_err or "Gemini API failed")
 
 
-def call_bedrock_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
+def call_bedrock_api(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None, rag_mode: bool = False) -> str:
     messages = []
     last_role = None
+    sys_prompt = RAG_SYSTEM_PROMPT if rag_mode else SYSTEM_PROMPT
 
     for msg in conversation_history:
         role = "user" if msg.get("role") not in ("user", "assistant") else msg.get("role")
@@ -449,7 +517,7 @@ def call_bedrock_api(conversation_history: list[dict], new_question: str, docume
         messages.append({"role": role, "content": [{"text": content}]})
         last_role = role
 
-    question = prepare_user_question(new_question, document_context, subject)
+    question = prepare_user_question(new_question, document_context, subject, rag_mode)
 
     if last_role == "user" and messages:
         messages[-1]["content"][0]["text"] += f"\n{question}"
@@ -477,7 +545,7 @@ def call_bedrock_api(conversation_history: list[dict], new_question: str, docume
                 "inferenceConfig": {"maxTokens": 4096, "temperature": 0.3},
             }
             if "anthropic" in model_id.lower():
-                kwargs["system"] = [{"text": SYSTEM_PROMPT}]
+                kwargs["system"] = [{"text": sys_prompt}]
 
             response = client.converse(**kwargs)
             return response["output"]["message"]["content"][0]["text"]
@@ -498,13 +566,13 @@ def call_bedrock_api(conversation_history: list[dict], new_question: str, docume
         raise LLMError(f"AWS Bedrock Exception: {str(last_exception or 'Unknown error')}")
 
 
-def get_llm_response(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> str:
+def get_llm_response(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None, rag_mode: bool = False) -> str:
     errors = []
 
     # 1. OpenRouter API (Access to 400+ LLMs)
     if settings.openrouter_api_key:
         try:
-            return call_openrouter_api(conversation_history, new_question, document_context, subject)
+            return call_openrouter_api(conversation_history, new_question, document_context, subject, rag_mode)
         except Exception as e:
             print(f"OpenRouter API failed: {e}")
             errors.append(str(e))
@@ -512,7 +580,7 @@ def get_llm_response(conversation_history: list[dict], new_question: str, docume
     # 2. Groq Cloud API
     if settings.groq_api_key:
         try:
-            return call_groq_api(conversation_history, new_question, document_context, subject)
+            return call_groq_api(conversation_history, new_question, document_context, subject, rag_mode)
         except Exception as e:
             print(f"Groq API failed: {e}")
             errors.append(str(e))
@@ -520,14 +588,14 @@ def get_llm_response(conversation_history: list[dict], new_question: str, docume
     # 3. Google Gemini API
     if settings.gemini_api_key:
         try:
-            return call_gemini_api(conversation_history, new_question, document_context, subject)
+            return call_gemini_api(conversation_history, new_question, document_context, subject, rag_mode)
         except Exception as e:
             print(f"Gemini API failed: {e}")
             errors.append(str(e))
 
     # 4. AWS Bedrock Runtime
     try:
-        return call_bedrock_api(conversation_history, new_question, document_context, subject)
+        return call_bedrock_api(conversation_history, new_question, document_context, subject, rag_mode)
     except Exception as e:
         print(f"Bedrock API failed: {e}")
         errors.append(str(e))
@@ -536,13 +604,13 @@ def get_llm_response(conversation_history: list[dict], new_question: str, docume
     raise LLMError(f"Live AI APIs unavailable: {combined_err}")
 
 
-def stream_llm_response(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> Generator[str, None, None]:
+def stream_llm_response(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None, rag_mode: bool = False) -> Generator[str, None, None]:
     """Generates SSE formatted string stream. Uses native OpenRouter/Groq streaming when available, falls back to full response."""
 
     # 1. Native OpenRouter streaming first
     if settings.openrouter_api_key:
         try:
-            yield from _stream_openrouter_native(conversation_history, new_question, document_context, subject)
+            yield from _stream_openrouter_native(conversation_history, new_question, document_context, subject, rag_mode)
             return
         except Exception as e:
             print(f"OpenRouter native stream failed, falling back to next provider: {e}")
@@ -550,13 +618,13 @@ def stream_llm_response(conversation_history: list[dict], new_question: str, doc
     # 2. Native Groq streaming second
     if settings.groq_api_key:
         try:
-            yield from _stream_groq_native(conversation_history, new_question, document_context, subject)
+            yield from _stream_groq_native(conversation_history, new_question, document_context, subject, rag_mode)
             return
         except Exception as e:
             print(f"Groq native stream failed, falling back: {e}")
 
     # 3. Fallback: get full response from any provider then emit in chunks
-    full_response = get_llm_response(conversation_history, new_question, document_context, subject)
+    full_response = get_llm_response(conversation_history, new_question, document_context, subject, rag_mode)
     words = full_response.split(" ")
     chunk_size = 3
     for i in range(0, len(words), chunk_size):
@@ -564,22 +632,22 @@ def stream_llm_response(conversation_history: list[dict], new_question: str, doc
         yield f"data: {json.dumps({'content': chunk_text})}\n\n"
 
 
-
-def _stream_groq_native(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None) -> Generator[str, None, None]:
+def _stream_groq_native(conversation_history: list[dict], new_question: str, document_context: str | None = None, subject: str | None = None, rag_mode: bool = False) -> Generator[str, None, None]:
     """Native streaming from Groq API using chunked HTTP transfer."""
     if not settings.groq_api_key:
         raise LLMError("GROQ_API_KEY is not configured.")
 
     url = "https://api.groq.com/openai/v1/chat/completions"
+    sys_prompt = RAG_SYSTEM_PROMPT if rag_mode else SYSTEM_PROMPT
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": sys_prompt}]
     for msg in conversation_history:
         role = "user" if msg.get("role") == "user" else "assistant"
         content = (msg.get("content") or "").strip()
         if content:
             messages.append({"role": role, "content": content})
 
-    question = prepare_user_question(new_question, document_context, subject)
+    question = prepare_user_question(new_question, document_context, subject, rag_mode)
     messages.append({"role": "user", "content": question})
 
     payload = {

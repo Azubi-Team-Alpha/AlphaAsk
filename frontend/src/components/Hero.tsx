@@ -17,6 +17,8 @@ interface HeroProps {
   attachedFile?: AttachedFile | null;
   onAttachFile?: (file: File) => void;
   onRemoveFile?: () => void;
+  ragMode?: boolean;
+  toggleRagMode?: () => void;
   onStarterClick: (prompt: string) => void;
   onSignUpClick: () => void;
 }
@@ -35,6 +37,8 @@ export function Hero({
   attachedFile,
   onAttachFile,
   onRemoveFile,
+  ragMode,
+  toggleRagMode,
   onStarterClick,
   onSignUpClick,
 }: HeroProps) {
@@ -57,6 +61,8 @@ export function Hero({
           attachedFile={attachedFile}
           onAttachFile={onAttachFile}
           onRemoveFile={onRemoveFile}
+          ragMode={ragMode}
+          toggleRagMode={toggleRagMode}
         />
 
         <div className="aa-starter-row">

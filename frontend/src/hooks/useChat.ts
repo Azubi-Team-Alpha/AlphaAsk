@@ -21,6 +21,7 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
   const [draft, setDraft] = useState("");
   const [subject, setSubject] = useState<SubjectKey | undefined>(undefined);
   const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
+  const [ragMode, setRagMode] = useState<boolean>(false);
   const [isThinking, setIsThinking] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -32,6 +33,7 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
     setDraft("");
     setSubject(undefined);
     setAttachedFile(null);
+    setRagMode(false);
     textareaRef.current?.focus();
   }, []);
 
@@ -85,12 +87,17 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
     setAttachedFile(null);
   }, []);
 
+  const toggleRagMode = useCallback(() => {
+    setRagMode((prev) => !prev);
+  }, []);
+
   const handleSend = useCallback(async () => {
     const question = draft.trim();
     if (!question || isThinking) return;
 
+    const ragTag = ragMode ? " [⚡ RAG Strict Grounding Mode]" : "";
     const userMessageContent = attachedFile
-      ? `📄 [Attached: ${attachedFile.name}${attachedFile.sizeFormatted ? ` (${attachedFile.sizeFormatted})` : ""}]\n\n${question}`
+      ? `📄 [Attached: ${attachedFile.name}${attachedFile.sizeFormatted ? ` (${attachedFile.sizeFormatted})` : ""}${ragTag}]\n\n${question}`
       : question;
 
     const userMessage: Message = {
@@ -104,6 +111,7 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
     setMessages((prev) => [...prev, userMessage]);
     setDraft("");
     const docContext = attachedFile?.content;
+    const isRag = ragMode;
     setAttachedFile(null);
     setIsThinking(true);
 
@@ -130,6 +138,7 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
         sid,
         docContext,
         subject,
+        isRag,
         (textSoFar) => {
           setMessages((prev) =>
             prev.map((msg) =>
@@ -200,6 +209,8 @@ export function useChat({ isAuthenticated, setConversations }: UseChatOptions) {
     attachedFile,
     handleAttachFile,
     handleRemoveFile,
+    ragMode,
+    toggleRagMode,
     isThinking,
     textareaRef,
     startNewChat,

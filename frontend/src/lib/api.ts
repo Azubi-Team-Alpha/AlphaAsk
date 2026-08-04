@@ -89,12 +89,12 @@ export async function register(payload: AuthPayload): Promise<CurrentUser> {
   };
 }
 
-export async function askAlphaAsk(question: string, session_id?: string, subject?: string): Promise<{ answer: string; session_id: string }> {
+export async function askAlphaAsk(question: string, session_id?: string, subject?: string, document_context?: string, rag_mode?: boolean): Promise<{ answer: string; session_id: string }> {
   const sid = session_id || generateUUID();
   const res = await fetch(`${API_BASE}/api/ask`, {
     method: "POST",
     headers: getHeaders(),
-    body: JSON.stringify({ question, session_id: sid, subject }),
+    body: JSON.stringify({ question, session_id: sid, subject, document_context, rag_mode: !!rag_mode }),
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ detail: "Request failed" }));
@@ -108,6 +108,7 @@ export async function askAlphaAskStream(
   session_id: string | undefined,
   document_context: string | undefined,
   subject: string | undefined,
+  rag_mode: boolean | undefined,
   onChunk: (textSoFar: string) => void
 ): Promise<string> {
   const sid = session_id || generateUUID();
@@ -115,11 +116,11 @@ export async function askAlphaAskStream(
     const res = await fetch(`${API_BASE}/api/ask/stream`, {
       method: "POST",
       headers: getHeaders(),
-      body: JSON.stringify({ question, session_id: sid, document_context, subject }),
+      body: JSON.stringify({ question, session_id: sid, document_context, subject, rag_mode: !!rag_mode }),
     });
 
     if (!res.ok || !res.body) {
-      const syncRes = await askAlphaAsk(question, sid, subject);
+      const syncRes = await askAlphaAsk(question, sid, subject, document_context, rag_mode);
       onChunk(syncRes.answer);
       return syncRes.answer;
     }

@@ -8,6 +8,7 @@ class AskRequest(BaseModel):
     session_id: UUID | str
     document_context: str | None = None
     subject: str | None = None
+    rag_mode: bool = False
 
 
 class AskResponse(BaseModel):

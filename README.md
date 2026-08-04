@@ -134,3 +134,4 @@ npm run build
 - **Technical Challenges & Solutions Log**: [docs/CHALLENGES_AND_SOLUTIONS.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/CHALLENGES_AND_SOLUTIONS.md)
 - **Serverless Architecture Report**: [docs/DOCKER_SERVERLESS_REPORT.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/DOCKER_SERVERLESS_REPORT.md)
 - **Local Testing & Terraform Guide**: [docs/LOCAL_TESTING_AND_TERRAFORM_GUIDE.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/LOCAL_TESTING_AND_TERRAFORM_GUIDE.md)
+- **Product Presentation & Demo Guide**: [docs/DEMO_PRESENTATION_GUIDE.md](file:///home/haadi/Desktop/AWS%20Cloud/Azubi-AWS-AI/Team%20Alpha/alphaask/docs/DEMO_PRESENTATION_GUIDE.md)

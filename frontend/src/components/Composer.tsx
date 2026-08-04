@@ -16,6 +16,8 @@ interface ComposerProps {
   attachedFile?: AttachedFile | null;
   onAttachFile?: (file: File) => void;
   onRemoveFile?: () => void;
+  ragMode?: boolean;
+  toggleRagMode?: () => void;
   showChips?: boolean;
   chipsAlign?: "center" | "start";
   hint?: string;
@@ -34,6 +36,8 @@ export function Composer({
   attachedFile,
   onAttachFile,
   onRemoveFile,
+  ragMode,
+  toggleRagMode,
   showChips = false,
   chipsAlign = "center",
   hint,
@@ -76,43 +80,71 @@ export function Composer({
         </div>
       )}
 
-      {attachedFile && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            marginBottom: 6,
-            fontSize: 12,
-            padding: "4px 10px",
-            borderRadius: 6,
-            background: "var(--aa-surface-raised)",
-            border: "1px solid var(--aa-accent)",
-            color: "var(--aa-accent)",
-            width: "fit-content",
-          }}
-        >
-          <FileText size={14} />
-          <span>
-            {attachedFile.name}
-            {attachedFile.sizeFormatted ? ` (${attachedFile.sizeFormatted})` : ""}
-          </span>
-          <button
-            onClick={onRemoveFile}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--aa-accent)",
-              display: "flex",
-              alignItems: "center",
-              padding: 0,
-              marginLeft: 4,
-            }}
-            aria-label="Remove attached file"
-          >
-            <X size={13} />
-          </button>
+      {(attachedFile || toggleRagMode) && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+          {attachedFile && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 12,
+                padding: "4px 10px",
+                borderRadius: 6,
+                background: "var(--aa-surface-raised)",
+                border: "1px solid var(--aa-accent)",
+                color: "var(--aa-accent)",
+                width: "fit-content",
+              }}
+            >
+              <FileText size={14} />
+              <span>
+                {attachedFile.name}
+                {attachedFile.sizeFormatted ? ` (${attachedFile.sizeFormatted})` : ""}
+              </span>
+              <button
+                onClick={onRemoveFile}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--aa-accent)",
+                  display: "flex",
+                  alignItems: "center",
+                  padding: 0,
+                  marginLeft: 4,
+                }}
+                aria-label="Remove attached file"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          )}
+
+          {toggleRagMode && (
+            <button
+              onClick={toggleRagMode}
+              type="button"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                fontSize: 11,
+                fontWeight: 600,
+                padding: "4px 10px",
+                borderRadius: 20,
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                background: ragMode ? "rgba(16, 185, 129, 0.15)" : "var(--aa-surface-raised)",
+                border: ragMode ? "1px solid #10b981" : "1px solid var(--aa-border)",
+                color: ragMode ? "#10b981" : "var(--aa-text-muted)",
+              }}
+              title="Toggle Strict Document Grounding Mode: Restricts AI responses strictly to facts inside attached documents"
+            >
+              <span style={{ fontSize: 13 }}>⚡</span>
+              <span>RAG Strict Grounding: {ragMode ? "ON" : "OFF"}</span>
+            </button>
+          )}
         </div>
       )}
 

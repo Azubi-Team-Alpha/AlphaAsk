@@ -88,18 +88,22 @@
 5. Frontend `askAlphaAskStream` reader consumes tokens live, updating active assistant message placeholder word-by-word.
 6. Upon stream completion, backend automatically persists user prompt and generated answer into DynamoDB `alphaask-Messages`.
 
-### 3.3 Document & PDF Upload (RAG Context Injection) Flow
-1. Student clicks attachment button `+` in `Composer.tsx`.
-2. Selects `.pdf`, `.txt`, `.md`, or `.doc` file.
-3. Client-side stream text parser extracts clean printable text lines (stripping PDF metric arrays `/Widths` and binary headers `/FirstChar`).
-4. Attachment chip `[📄 Lecture_Notes.pdf (x)]` is displayed in the composer interface.
-5. Content is sent inside `document_context` parameter. Backend formats system prompt:
+### 3.3 Document & PDF Upload (RAG Strict Grounding) Flow
+1. Student clicks attachment button `+` in `Composer.tsx` and selects a `.pdf`, `.txt`, `.md`, or `.doc` file.
+2. Client-side stream text parser extracts clean printable text lines (stripping PDF metric arrays `/Widths` and binary headers `/FirstChar`).
+3. Student toggles **`[⚡ RAG Strict Grounding: ON]`** in the UI composer (`rag_mode = True`).
+4. Upon submission, backend receives `document_context` and `rag_mode: true`:
+   - `chunk_and_retrieve_context()` divides long documents into overlapping passages (~1,500 chars with 200 char overlap).
+   - Performs keyword relevance scoring against the student query to select the top relevant passages.
+   - Activates `RAG_SYSTEM_PROMPT` enforcing strict document grounding, anti-hallucination rules, and mandatory passage citations.
+5. Content is injected into the AI prompt structure:
    ```
-   [ATTACHED STUDY DOCUMENT / LECTURE NOTES CONTEXT]:
-   ... (Extracted document text) ...
-   [STUDENT QUESTION]: (User prompt)
+   [RAG STRICT GROUNDING DOCUMENT PASSAGES]:
+   The following passages were retrieved from the attached document. Answer ONLY using these passages:
+   ... (Top retrieved document passages) ...
+   [STUDENT QUESTION (RAG STRICT GROUNDING)]: (User prompt)
    ```
-6. AI model generates targeted answers based directly on lecture notes.
+6. AI model generates targeted, grounded responses based exclusively on the uploaded document text.
 
 ---
 

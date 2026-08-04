@@ -18,6 +18,8 @@ interface MessageThreadProps {
   attachedFile?: AttachedFile | null;
   onAttachFile?: (file: File) => void;
   onRemoveFile?: () => void;
+  ragMode?: boolean;
+  toggleRagMode?: () => void;
   isAuthenticated: boolean;
   onSignUpClick?: () => void;
 }
@@ -34,6 +36,8 @@ export function MessageThread({
   attachedFile,
   onAttachFile,
   onRemoveFile,
+  ragMode,
+  toggleRagMode,
   isAuthenticated,
   onSignUpClick,
 }: MessageThreadProps) {
@@ -122,6 +126,8 @@ export function MessageThread({
           attachedFile={attachedFile}
           onAttachFile={onAttachFile}
           onRemoveFile={onRemoveFile}
+          ragMode={ragMode}
+          toggleRagMode={toggleRagMode}
           showChips
           chipsAlign="start"
           hint={

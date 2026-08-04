@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { SubjectsModal } from "../SubjectsModal";
 import { ClassesModal } from "../ClassesModal";
@@ -37,7 +37,7 @@ describe("ClassesModal Component", () => {
 });
 
 describe("SavedAnswersModal Component", () => {
-  it("renders bookmarked answers and filters by search query", () => {
+  it("renders bookmarked answers and filters by search query", async () => {
     const onClose = vi.fn();
     render(<SavedAnswersModal onClose={onClose} />);
 
@@ -45,7 +45,9 @@ describe("SavedAnswersModal Component", () => {
     const searchInput = screen.getByPlaceholderText(/Search saved answers/i);
 
     fireEvent.change(searchInput, { target: { value: "redox" } });
-    expect(screen.getByText(/How do I balance redox equations/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/How do I balance redox equations/i)).toBeInTheDocument();
+    });
   });
 });
 

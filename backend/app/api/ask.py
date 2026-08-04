@@ -32,7 +32,7 @@ def ask(
 
     # 4. Call the LLM
     try:
-        answer = get_llm_response(history, payload.question, payload.document_context, payload.subject)
+        answer = get_llm_response(history, payload.question, payload.document_context, payload.subject, payload.rag_mode)
     except LLMError as e:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
 
@@ -81,7 +81,7 @@ def ask_stream(
     def event_generator():
         accumulated_answer = ""
         try:
-            for sse_event in stream_llm_response(history, payload.question, payload.document_context, payload.subject):
+            for sse_event in stream_llm_response(history, payload.question, payload.document_context, payload.subject, payload.rag_mode):
                 # Extract chunk to accumulate for persistence
                 if sse_event.startswith("data: "):
                     try:

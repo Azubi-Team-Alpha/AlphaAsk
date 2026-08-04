@@ -114,6 +114,8 @@ export default function AlphaAskApp() {
               attachedFile={chat.attachedFile}
               onAttachFile={chat.handleAttachFile}
               onRemoveFile={chat.handleRemoveFile}
+              ragMode={chat.ragMode}
+              toggleRagMode={chat.toggleRagMode}
               onStarterClick={chat.handleStarterClick}
               onSignUpClick={() => auth.setAuthModalMode("signup")}
             />
@@ -130,6 +132,8 @@ export default function AlphaAskApp() {
               attachedFile={chat.attachedFile}
               onAttachFile={chat.handleAttachFile}
               onRemoveFile={chat.handleRemoveFile}
+              ragMode={chat.ragMode}
+              toggleRagMode={chat.toggleRagMode}
               isAuthenticated={auth.isAuthenticated}
               onSignUpClick={() => auth.setAuthModalMode("signup")}
             />
