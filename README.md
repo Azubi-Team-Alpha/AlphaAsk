@@ -320,11 +320,8 @@ terraform apply -auto-approve
 
 | Document | Description |
 |---|---|
-| [SYSTEM_ARCHITECTURE_AND_WORKFLOW.md](docs/SYSTEM_ARCHITECTURE_AND_WORKFLOW.md) | Full system architecture specification, topology diagrams, component integration, and compliance audit |
 | [CHALLENGES_AND_SOLUTIONS.md](docs/CHALLENGES_AND_SOLUTIONS.md) | 14 documented technical challenges with root cause analysis and implemented solutions |
 | [LOCAL_TESTING_AND_TERRAFORM_GUIDE.md](docs/LOCAL_TESTING_AND_TERRAFORM_GUIDE.md) | Complete step-by-step local setup, test execution, and Terraform provisioning guide |
-| [DEMO_PRESENTATION_GUIDE.md](docs/DEMO_PRESENTATION_GUIDE.md) | Full presentation script, live demo walkthrough, architecture defense, and Q&A playbook |
-| [DOCKER_SERVERLESS_REPORT.md](docs/DOCKER_SERVERLESS_REPORT.md) | Serverless container architecture analysis and Lambda deployment report |
 
 ---
 
