@@ -187,18 +187,11 @@ class DynamoDBService:
 
     
     def get_conversation_history(self, session_id: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get conversation history for context (limited)"""
-        try:
-            response = self.messages_table.query(
-                IndexName="SessionMessagesIndex",
-                KeyConditionExpression="session_id = :session_id",
-                ExpressionAttributeValues={":session_id": session_id},
-                ScanIndexForward=True,
-                Limit=limit
-            )
-            return response.get("Items", [])
-        except ClientError:
-            return self.get_session_messages(session_id)[:limit]
+        """Get conversation history for context (limited to recent messages sorted chronologically)"""
+        all_msgs = self.get_session_messages(session_id)
+        if not all_msgs:
+            return []
+        return all_msgs[-limit:] if limit else all_msgs
     
     def delete_message(self, message_id: str) -> None:
         """Delete a message"""

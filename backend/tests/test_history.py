@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
@@ -49,4 +50,22 @@ def test_get_history_not_found(mock_get_session, auth_headers):
 def test_get_history_unauthorized():
     response = client.get("/history/some-session-id")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_dynamodb_get_conversation_history_ordering():
+    from app.db.dynamodb import dynamodb_service
+
+    messages = [
+        {"message_id": "1", "session_id": "s1", "role": "user", "content": "Q1", "created_at": "2026-08-06T10:00:00Z"},
+        {"message_id": "2", "session_id": "s1", "role": "assistant", "content": "A1", "created_at": "2026-08-06T10:00:01Z"},
+        {"message_id": "3", "session_id": "s1", "role": "user", "content": "Q2", "created_at": "2026-08-06T10:01:00Z"},
+        {"message_id": "4", "session_id": "s1", "role": "assistant", "content": "A2", "created_at": "2026-08-06T10:01:01Z"},
+    ]
+
+    with patch.object(dynamodb_service, "get_session_messages", return_value=messages):
+        history = dynamodb_service.get_conversation_history("s1", limit=2)
+        assert len(history) == 2
+        assert history[0]["content"] == "Q2"
+        assert history[1]["content"] == "A2"
+
 
