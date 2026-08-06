@@ -349,3 +349,12 @@ terraform apply -auto-approve
 | Terraform Infrastructure | ✅ | Lambda, API GW, DynamoDB, ECR, ElastiCache, S3, CloudFront, IAM |
 | CI/CD Pipeline | ✅ | 4-stage GitHub Actions (lint → test → build → deploy) |
 | Cloudflare DNS/WAF | ✅ | alphaask.alphateam.live |
+
+
+### TEAM ROSTER
+- [x] Mustapha Haadi
+- [x] David Yirenkyi
+- [x] Daniel Hanson Reynolds
+- [x] Adeeba Zakaria
+- [x] Emmanuel Yelisomah
+- [x] Evame Cobblah
